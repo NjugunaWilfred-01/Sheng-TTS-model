@@ -1,0 +1,32 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Temporary audio files & generated outputs
+temp_audio/
+*.tar.gz
+*.log
+
+# Checkpoints & training intermediate weights (preserve final adapters if desired)
+*/checkpoint-*/
+*.bin
+*.pt
+*.pth
+
+# Environment variables & secrets
+.env
+.env.local
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
