@@ -69,6 +69,18 @@ class SpeechToSpeechPipeline:
         # Step 3: Kenyan Neural Voice Synthesis (TTS)
         out_filename = f"s2s_response_{int(time.time() * 1000)}.mp3"
         out_path = str(AUDIO_TEMP_DIR / out_filename)
+
+        try:
+            from naturalizer import vary_prosody
+        except ImportError:
+            def vary_prosody(emotion="neutral"):
+                import random
+                return random.choice(["-3%", "+0%", "+2%"]), random.choice(["-2Hz", "+0Hz", "+2Hz"])
+
+        if rate == "+0%" and pitch == "+0Hz":
+            emotion = llm_meta.get("emotion", "neutral")
+            rate, pitch = vary_prosody(emotion)
+
         audio_output, tts_meta = self.tts.synthesize(
             text=bot_reply,
             output_path=out_path,

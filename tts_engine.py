@@ -5,7 +5,7 @@ import time
 import asyncio
 import logging
 from pathlib import Path
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 
 from config import DEFAULT_VOICE, DEFAULT_RATE, DEFAULT_PITCH, AUDIO_TEMP_DIR, VOICE_OPTIONS
 from sheng_lexicon import ShengAcousticPhonetics
@@ -23,7 +23,7 @@ class ShengTTSEngine:
     async def synthesize_async(
         self,
         text: str,
-        output_path: Optional_Path = None,
+        output_path: Optional[Path] = None,
         voice: str = None,
         rate: str = None,
         pitch: str = None
@@ -54,7 +54,15 @@ class ShengTTSEngine:
                 pitch=selected_pitch
             )
             await communicate.save(str(output_path))
-            duration = time.time() - start_time
+                # Edge-TTS writes mp3. Convert to wav, polish, convert back.
+            if str(output_path).endswith(".mp3"):
+                from pydub import AudioSegment
+                wav_path = str(output_path).replace(".mp3", ".wav")
+                AudioSegment.from_mp3(str(output_path)).export(wav_path, format="wav")
+                self._polish(wav_path)
+                AudioSegment.from_wav(wav_path).export(str(output_path), format="mp3")
+                import os; os.remove(wav_path)
+                duration = time.time() - start_time
 
             metadata = {
                 "voice": selected_voice,
@@ -96,6 +104,26 @@ class ShengTTSEngine:
             return asyncio.run(
                 self.synthesize_async(text, output_path, voice, rate, pitch)
             )
+
+    def _polish(self, path: str):
+        """Compress + tiny reverb so the voice doesn't sound like a vacuum recording."""
+        try:
+            from pedalboard import Pedalboard, Reverb, Compressor, HighpassFilter, LowShelfFilter
+            from pedalboard.io import AudioFile
+        except ImportError:
+            return   # silently skip if pedalboard missing
+        board = Pedalboard([
+            HighpassFilter(cutoff_frequency_hz=80),
+            LowShelfFilter(cutoff_frequency_hz=250, gain_db=2),
+            Compressor(threshold_db=-18, ratio=3.0),
+            Reverb(room_size=0.15, wet_level=0.05),
+        ])
+        with AudioFile(path) as f:
+            audio = f.read(f.frames)
+            sr = f.samplerate
+        polished = board(audio, sr)
+        with AudioFile(path, "w", sr, polished.shape[0]) as f:
+            f.write(polished)   
 
 
 Optional_Path = Any

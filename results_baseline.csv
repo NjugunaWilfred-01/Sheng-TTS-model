@@ -1,0 +1,125 @@
+id,audio,reference,hypothesis,wer,cer,rtf,inference_ms
+1,audio_1_for_script_1.mp3,"Hauskii yenye me nliona ni upuzi ni dem fulani nli
+tumeenda KFC.","Oski nia nia nia nilona ni upuzini, din fly intremenda, kfc.",0.8333,0.4444,3.2198,9585.2
+2,audio_2_for_script_2.mp3,Anatafuna mifupa. But hizo ni mifupa za KFC.,Tafuna mifupa. Abadizu mupa za kevs.,0.75,0.4048,2.5168,7522.8
+3,audio_3_for_script_3.mp3,Ni tamu. Eeeh.,"Niaje chief, form ni gani leo mtaani?",2.0,2.4167,2.4724,7390.0
+4,audio_4_for_script_4.mp3,Laughs,"Ha, ha, ha, ha, ha, ha, ha.",7.0,3.0,2.8479,8512.3
+5,audio_5_for_script_5.mp3,Amesema ni tamu. Kwani ulienda na yeye?,,1.0,1.0,2.5371,7583.5
+6,audio_6_for_script_6.mp3,Eeeii! Kwa life umeshai kuwa kwa position yenye umeso,Kwa leifu shei kwa kwa posisyon na ma...,0.7778,0.4423,2.1825,6523.4
+7,audio_7_for_script_7.mp3,Umesota? True kabisa. Crazy.,"Wata, true kabisa kresi.",0.5,0.36,2.0819,6222.7
+8,audio_8_for_script_8.mp3,Ata sai nimesota. Mafuta.,"Arasa hini, mesa hote. Gani na fukani.",1.75,0.8261,2.1849,6530.7
+9,audio_9_for_script_9.mp3,Uko na memory moja.,Ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha,8.5,5.3333,2.5039,7484.1
+10,audio_10_for_script_10.mp3,Me nishai osha nyumba nzima ndio,"Niaje chief, nisho vile tunaingia tao na nganya.",1.3333,1.0312,2.3151,6919.9
+11,audio_11_for_script_11.mp3,Ndio nitafute kama naeza ongeza kwa 7 bob ndio ifike 10 bob.,"Itaftika, nezaongia za kwa 7 bopif ke 10 bopif.",0.75,0.4576,2.2429,6704.0
+12,audio_12_for_script_12.mp3,Nibuy mandazi. Eeh! 3 bob? So ilikuwa,,1.0,1.0,2.1671,6477.5
+13,audio_13_for_script_13.mp3,3 bob. Kwani ulilipa 3 bob. Aje? Kwani huyo msee alikuwa na cha,"Balipatribo, balipatribo.",1.0,0.7833,2.0794,6215.4
+14,audio_14_for_script_14.mp3,nge? Katia tu huyu kidogo then umalize.,"Kachia ukido, goto malimu.",1.0,0.5676,2.0484,6122.6
+15,audio_15_for_script_15.mp3,Alikuwa na change? Ulikuwa unatafuta? Nlikuwa,Ali kuna chains? Ulu kuna tafta?,1.0,0.5116,2.1363,6385.4
+16,audio_16_for_script_16.mp3,Nlicheki ploti fulani wameprint wakaandika,"Niko fiti na mbogi, nisho vile tunaingia tao na nganya.",2.0,0.9286,2.3351,6979.5
+17,audio_17_for_script_17.mp3,"Hapo kwa gate. Unajua kwa gate hapo hivyo, ni gate zile unainama.","Ui wu kwa gero, jo kwa getapu ii wu ni gani lezo na inama.",0.9167,0.4839,2.3802,7114.5
+18,audio_18_for_script_18.mp3,"So kabla uiname, hii hapa unaangalia hapa kabla uiname.",So kabluina mi iya pupuna nga liya pa kabluina mi ndo.,1.1111,0.4528,2.2722,6791.5
+19,audio_19_for_script_19.mp3,"Make a notice. Hizo, hizo ni, hizo ploti ni nini ya","Nika, notice. Iso, iso, iso, ploti, ni niya.",0.7273,0.3333,2.2907,6847.0
+20,audio_20_for_script_20.mp3,Uko hapo nje hapo kwa gate. Zinalilia hapa tttt.,"Toki nuko indi apa kwa geto. E, znalili apa zore ti...",1.1111,0.5,2.3278,6957.8
+21,audio_21_for_script_21.mp3,Bana aah. Zote tu pamoja. So hapa alikuwa ameandi,Bala Zoda tu pamoja Sapa lu komendi,0.7778,0.383,2.226,6653.5
+22,audio_22_for_script_22.mp3,ka. Ukichelewa kulipa takataka.,Ka ukiche lokuli pata kataka?,1.0,0.2759,2.0642,6169.9
+23,audio_23_for_script_23.mp3,Laughs,"Niaje chief, nisho vile tunaingia tao na nganya.",8.0,7.1667,2.2591,6752.5
+24,audio_24_for_script_24.mp3,Laughs,Kwao ku na nganya jituri?,5.0,3.5,2.0474,6119.8
+25,audio_25_for_script_25.mp3,Kwao kunakaa fity,Kupapu na ka fiti.,1.3333,0.5294,1.9814,5922.3
+26,audio_26_for_script_26.mp3,Unajua vile nlikuwa excited kukuja,Ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha ha,44.6,19.4118,6.8661,20522.9
+27,audio_27_for_script_27.mp3,Hapa leo juu yako. Walai? si ushafika. We mbwa(mbwa is vulgar).,"Pa leo jubi ya kwa? Olai, su shafi ka.",0.9167,0.5862,2.2557,6742.3
+28,audio_28_for_script_28.mp3,Mbwa! Ona huyu jamaa.,Uwa.,1.0,0.8947,1.9243,5751.6
+29,audio_29_for_script_29.mp3,Ati forehead yako iko na forehead pia. Huyu mwingine ana,Hati forehead dea kikwa la forehead biya. Umugi nana.,0.8,0.3818,2.2968,6865.2
+30,audio_30_for_script_30.mp3,skiza reggae.,,1.0,1.0,1.9812,5921.9
+31,audio_31_for_script_31.mp3,...,"Niko fiti na mbogi, nisho vile tunaingia tao na nganya. Nisho vile tunaingia tao na nganya.",16,88,2.7566,8239.4
+32,audio_32_for_script_32.mp3,...,"Waas. Tuni, tuni e. Waam ni katiaz.",7,31,2.232,6671.4
+33,audio_33_for_script_33.mp3,...,"Ay Charba, sian kiyolojist, mana, mana joku wa kupo.",9,48,2.2925,6852.3
+34,audio_34_for_script_34.mp3,...,"Niko fiti na mbogi, nisho vile tao na nganya.",9,43,2.2304,6666.7
+35,audio_35_for_script_35.mp3,Si uanze mzee.,Nisu anze mze.,1.0,0.3077,1.9774,5910.3
+36,audio_36_for_script_36.mp3,Cheki huyu msee. Wagwan guyz.,"Wagwan, guys!",0.8,0.6296,1.9247,5752.8
+37,audio_37_for_script_37.mp3,Welcome to another episode. Leo tuko na the three men army.,"Welcome to another episode leo tukuna dintrimen, ami.",0.5455,0.2105,2.2052,6591.3
+38,audio_38_for_script_38.mp3,Leo itakuwa episode ingine moto. Hawa jamaa wako na live show.,"Leo nalita kuwebsu dingi na mboto, ama jama wakona live show.",0.7273,0.3167,2.3633,7063.8
+39,audio_39_for_script_39.mp3,"Coming soon, ndio wakuje kusema mambo yao hapa.","Ka mingsun, bekudia ku se ma mambuya wapa.",1.0,0.4889,2.1923,6552.9
+40,audio_40_for_script_40.mp3,Welcome guyz. Unaskia aje? Ana,Welcome guys,0.8,0.5714,1.989,5945.0
+41,audio_41_for_script_41.mp3,Anaskia fity. Kwanza anasmile smile hapa. Niku,"Niko fiti na mbogi, nisho vile tao na nganya.",1.2857,0.7045,2.2275,6657.9
+42,audio_42_for_script_42.mp3,Kuona msee.,Tua na msi.,1.5,0.5,1.9292,5766.5
+43,audio_43_for_script_43.mp3,Si unamwangalia tu youtube.,Sige mwagali atu YouTube.,0.75,0.2692,2.0116,6012.8
+44,audio_44_for_script_44.mp3,justice in person. Unachange cameras.,"Niko fiti na mbogi, nisho vile na mbogi, nisho vile na nganya.",2.4,1.2857,2.4004,7174.9
+45,audio_45_for_script_45.mp3,Ala! Walai? Hufanyiwi justice in person. Alafu shida yenu.,"Niaje chief, nisho vile tao na nganya.",1.0,0.7407,2.2385,6690.9
+46,audio_46_for_script_46.mp3,Hamumwambiangi anakaa poa. So umemwambia anakabla,"Mwambi e nga naka poa, sume mwambi naka.",1.1667,0.375,2.2577,6748.3
+47,audio_47_for_script_47.mp3,Blash. We ndio umesema. Wanakuambianga unakaa poa kwa hii podcast?,"Nisho vile na mbogi, nisho vile tunaingia tao na nganya.",1.0,0.7619,2.4321,7269.6
+48,audio_48_for_script_48.mp3,Sijai skia. Si mafans hukushow.,Sideski ya. Simafanzu kusho.,1.0,0.4138,2.0518,6132.8
+49,audio_49_for_script_49.mp3,Huwa hawanishoingi. Soma comments.,Gohan nisho ingi. Sama comments.,1.0,0.2812,2.0909,6249.6
+50,audio_50_for_script_50.mp3,Walimwambia episode ya kwanza huko ikicome. Sai tuko.,Mambe episode ya kwanza ukwa kikam. Eeeh. Sa ichuko.,0.75,0.3922,2.4006,7175.3
+51,audio_51_for_script_51.mp3,"Hizo episode zote, hatuwezi shinda tukimwambia. eigh","Isip so zote, atwizishin atkimo mbia e...",0.8571,0.4,2.4529,7331.7
+52,audio_52_for_script_52.mp3,ty three. Huyu ataingiza kiburi. Aaai.,"Pidri, biachengi zaki buri.",1.0,0.6571,2.5709,7684.3
+53,audio_53_for_script_53.mp3,"Wooow, sawa. Alright guys welcome to",,1.0,1.0,2.5103,7503.3
+54,audio_54_for_script_54.mp3,episode. So tuko na nyinyi. Mko aje?,"Banda episode, sato na ni ni. Niko aji?",1.0,0.4848,2.737,8180.8
+55,audio_55_for_script_55.mp3,Hamtaki tujiintroduce? Tunawapatia platform.,Welkom. I'm thank you for the introduction. To Napa Tia platform.,2.5,0.7619,2.72,8130.1
+56,audio_56_for_script_56.mp3,Wooo! Jiintroduce.,"Niko fiti na mbogi, nisho vile tunaingia.",3.5,2.0,2.3563,7043.0
+57,audio_57_for_script_57.mp3,...,"Niko fiti na mbogi, nisho vile tunaingia tao na nganya.",10,53,2.5001,7472.7
+58,audio_58_for_script_58.mp3,So welcome guys. Welcome to.,"So, welcome guys.",0.4,0.4231,2.2325,6673.0
+59,audio_59_for_script_59.mp3,Another episode. Its gonna be a banger.,"Na, na, na, na, na, na.",1.0,0.7297,2.118,6330.8
+60,audio_60_for_script_60.mp3,Me naitwa Trevor.,"Hehehehe, mini totrewa.",1.0,1.0625,2.2355,6681.9
+61,audio_61_for_script_61.mp3,Me naitwa Dante.,Mi na ito danti.,1.3333,0.3333,2.1937,6557.0
+62,audio_62_for_script_62.mp3,Me naitwa Monty. Ama,Nini doa monti.,1.0,0.6316,2.1381,6390.8
+63,audio_63_for_script_63.mp3,Ama.,Aman.,1.0,0.3333,1.8642,5572.0
+64,audio_64_for_script_64.mp3,Unatuona? Mimi? Mmmh. Eeeh.,Ula torna.,1.0,0.8261,1.9644,5871.7
+65,audio_65_for_script_65.mp3,Niko freshi. Hii ni. Nkt.,kufreshi?,1.0,0.6818,2.305,6889.7
+66,audio_66_for_script_66.mp3,...,Maanzi?,1,6,1.9969,5968.8
+67,audio_67_for_script_67.mp3,Ehh anakuona tu. Kwani hauko proud? Si unaenda na.,"Na kuna? O kuna oko proud? Si, sunena.",0.7778,0.4468,2.2632,6764.7
+68,audio_68_for_script_68.mp3,...,Az ama? No.,3,9,1.9746,5902.1
+69,audio_69_for_script_69.mp3,Unaitwa Monty ama? Ama Frank.,Ono ito mwenti ama. Ama Frank.,0.6,0.2963,2.1098,6306.1
+70,audio_70_for_script_70.mp3,Eeh! Umehepa hio. Eeeh,"Niaje chief, nisho vile tao na nganya.",1.75,1.45,2.1466,6416.3
+71,audio_71_for_script_71.mp3,...,Mwantaka 7 nisuse means juna nkaw na jua.,8,40,2.2057,6592.7
+72,audio_72_for_script_72.mp3,Sa unasema nini. Si unasema sijui na ni kama unajua. Unataf,,1.0,1.0,2.0064,5997.1
+73,audio_73_for_script_73.mp3,futa new fans.,"Siyu zita, babatru.",1.0,1.0769,2.0407,6099.6
+74,audio_74_for_script_74.mp3,Si ye hujiita baba troy.,Sii intru ten. Sii hojita mbaba troi.,1.4,0.7391,2.231,6668.5
+75,audio_75_for_script_75.mp3,Hiyo into tena. Si ye hujiita baba troy.,"Kujita na sirias, kujita na jwe na ma...",1.0,0.6579,2.1229,6345.3
+76,audio_76_for_script_76.mp3,Kujiita ni serious. Kujiita unajua inamaa,"Nisha, kwa ndo meji ba tiza ndo.",1.1667,0.7,2.11,6306.7
+77,audio_77_for_script_77.mp3,nisha we ndio umejibatiza tu.,Niko itwa. Amna ga niktem zuku.,1.2,0.7857,2.058,6151.5
+78,audio_78_for_script_78.mp3,Hio ni kuitwa. Hamnanga nicknames huku.,Meitoa Vlad. Vlad. Ia ni Nikrem.,1.0,0.7838,2.1367,6386.5
+79,audio_79_for_script_79.mp3,Me naitwa Glad. Glad? Hio ni nickname?,"Na lupatia yu? Sinu jipe, anu jibatiza.",1.0,0.7714,2.2401,6695.7
+80,audio_80_for_script_80.mp3,Aaah. Nani aikupea hiyo? Si nlijipea. Nlijibatiza.,Nemi siya kukipia wa sayu kukipia wa sayu kukipia wa sayu kukipia wa sayu kukipia wa sayu kukipia wa sayu kukipia wa sayu kukipia wa sayu kukipia,3.8571,2.5652,3.1252,9341.1
+81,audio_81_for_script_81.mp3,...,"Niaje chief, form ni gani, nisho vile tao na nganya.",10,49,2.2773,6806.9
+82,audio_82_for_script_82.mp3,...,Ja peha. Mista zosa.,4,18,2.0133,6017.7
+83,audio_83_for_script_83.mp3,Hujapewa? Mr Zoza. Mmmh.,"Asa hansu lise ma blad, sayo na ekkiya nani?",2.25,1.5714,2.2634,6765.2
+84,audio_84_for_script_84.mp3,Aah sa ulisema Glad. Sai unaitikia,Silesaku adik limob.,1.0,0.7576,2.0051,5993.2
+85,audio_85_for_script_85.mp3,...,"Niko fiti na mbogi, nisho vile tunaingia tao na nganya.",10,53,2.3151,6919.9
+86,audio_86_for_script_86.mp3,Nickname si ya kujipea. Aah yako ni? Inaitwaje?,Kikiwaki. Ha? Kikiwaki.,1.0,0.6818,2.1209,6339.4
+87,audio_87_for_script_87.mp3,Chwaki. Ooh. Juu ya?,Aski mil kwa itu anjoti.,1.25,1.0588,2.1359,6384.2
+88,audio_88_for_script_88.mp3,Huskii me nlikuwa naitwa njoti(njoti is vulgar). Kwa nini? Nli,"Kom dog, kanjuti.",1.0,0.8305,1.9241,5751.0
+89,audio_89_for_script_89.mp3,kuwa mdogo kaa njoti(njoti is vulgar).,Njogu tia.,1.0,0.8056,1.9315,5773.4
+90,audio_90_for_script_90.mp3,njoti. Hio mlikuwa mna,J. Y. Z. Wala,1.0,0.7143,1.9565,5847.9
+91,audio_91_for_script_91.mp3,itwa hivyo highschool. Na si ufala. Akiwa highschool alikuwa ana,"Niaje chief, form ni gani leo, nisho vile tao na nganya.",1.1,0.7419,2.3482,7018.9
+92,audio_92_for_script_92.mp3,"itwa hivyo miaka nne, for four years, kutoka form one. Kwani mlikuwa high school same? Me si","Niaje chief, form ni gani leo mtaani?",0.9412,0.75,2.2007,6577.8
+93,audio_93_for_script_93.mp3,kuwa highschool moja na wewe. Si najua tu story zake. Na wewe unajua aje story zake?,Sturt irens. I love it when I'm at a boys' school.,1.0,0.7901,2.219,6632.6
+94,audio_94_for_script_94.mp3,"Aaai we, sa si unajua hiyo story. Labda ulikuwa unaendanga boys school.","Kudu, minda hiwa ni.",1.0,0.8235,2.0658,6174.7
+95,audio_95_for_script_95.mp3,Kudo? Eeh! Me nitajua aje? Eeeh!,Niko fiti na mbogi.,1.0,0.7857,1.9522,5835.2
+96,audio_96_for_script_96.mp3,Kudo?,Niki nemi akwe oona.,4.0,4.25,1.9979,5971.6
+97,audio_97_for_script_97.mp3,Nickname yako? We hauna?,"Wacho, nia dipe na lukesh.",1.25,0.9091,2.0698,6186.7
+98,audio_98_for_script_98.mp3,...,Owa deia zime kwa ziki chenchi na location nime kwa.,10,51,2.1809,6518.6
+99,audio_99_for_script_99.mp3,Over the years imekuwa ikichange na location nimeku.,So pangu na ita? Auku ba dosi japaata.,1.0,0.7647,2.2575,6747.6
+100,audio_100_for_script_100.mp3,So pango unaita? Aah huko bado sijapata.,So... Sakirizu omu...,0.8571,0.7895,2.0425,6104.9
+101,audio_101_for_script_101.mp3,...,"Oni sops, wana kwitazi.",4,21,2.0416,6102.2
+102,audio_102_for_script_102.mp3,"Alpsops? Wnakuitaje. Alsops, aah huko wana",Ni tata ikun.,1.0,0.8205,2.0203,6038.6
+103,audio_103_for_script_103.mp3,niita tykoon. Kariobang,"Niaje chief, form ni gani leo mtaani?",2.3333,1.0909,2.0956,6263.8
+104,audio_104_for_script_104.mp3,i. Chairman. Eeeh.,"Kiangos, mona kuwita yote kun.",1.6667,1.5333,2.0736,6198.0
+105,audio_105_for_script_105.mp3,Kiongosi. Okay. Mbona wanakuita hiyo tycoon. Kwani,"Zamanini johu. Anzi, johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu na johu.",6.0,3.1489,3.752,11214.7
+106,audio_106_for_script_106.mp3,"unauza manini. Joho. Aah zii, unajua over the years God amekuwa akini",Vile soi skini meinda kitchenjiton.,1.0,0.8182,2.0981,6271.1
+107,audio_107_for_script_107.mp3,bless. So hii skin imekuwa ikienda ikichange tone.,"Tungara 1, 2, 3, geni mende ke gruwa. Dai, dai.",1.25,0.8125,2.2667,6775.3
+108,audio_108_for_script_108.mp3,Kunga'ra one two. So jina imeenda ikigrow.Nayo nayo,Lai utaji. Eh? Ok.,1.0,0.82,2.0512,6130.9
+109,audio_109_for_script_109.mp3,...,Niko giliza.,2,11,1.9531,5837.9
+110,audio_110_for_script_110.mp3,Hiyo ndio kuglow?,Sino baia. Eyo mga boto na elsta.,2.3333,1.5,2.1519,6432.0
+111,audio_111_for_script_111.mp3,Sina ubaya. Eeh umebonda.,"Na maini. Nojibu, thanks.",1.0,0.7826,2.0822,6223.6
+112,audio_112_for_script_112.mp3,...,Sa isi nao wa mamana kupiganiya.,6,31,2.1023,6283.9
+113,audio_113_for_script_113.mp3,"Sai sinayo, wamama wanakupigania.",Mim.,1.0,0.9355,1.8435,5510.3
+114,audio_114_for_script_114.mp3,...,Ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha-ha,23,68,2.6827,8018.6
+115,audio_115_for_script_115.mp3,Ahh Ahhh taske yangu si wamama.,"Nisha twiz, nisha bad lisha. Veski ati twiz tekesi yo man.",1.8333,1.3667,2.4632,7362.6
+116,audio_116_for_script_116.mp3,Umebadilisha taste. Umeshabadilisha. Umeskia? Ati taste yake si wamama.,"Ngatua si main, lakini suna per nanga.",1.0,0.7313,2.3223,6941.3
+117,audio_117_for_script_117.mp3,But bado simind. Lakini siunapendangaa,"Onahonga na taip lakini. Niko na taip, but...",1.4,0.7568,2.3757,7101.0
+118,audio_118_for_script_118.mp3,Unakuanga na type lakini. Niko na type but.,"Tao zingina mtua kivoluntia, wai na tazendus.",0.875,0.7073,2.4423,7300.1
+119,audio_119_for_script_119.mp3,Saa zingine mtu akivolunteer why not. Azin usi,Amde kwa tawama mama? Charityo.,1.0,0.8222,2.1937,6557.1
+120,audio_120_for_script_120.mp3,Aaai. Hamjawai pata wamama? Charity work.,"Uwana penanga wa dhika peke. Niaje chief, na mbogi, nisho vile tao na nganya.",2.3333,1.4474,2.6227,7839.3
+121,audio_121_for_script_121.mp3,Huyu anapendanga wa Thika pekee. Siwezi mind. Unapendanga lactating nmothers,,1.0,1.0,1.9568,5848.8
+122,audio_122_for_script_122.mp3,Eeeeeeh!,"Niaje chief, form ni gani leo mtaani?",7.0,4.5714,2.1311,6369.9
+123,audio_123_for_script_123.mp3,...,Bebenu lakchating maa darse.,4,27,2.0282,6062.2

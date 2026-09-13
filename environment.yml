@@ -1,0 +1,14 @@
+name: tts_env
+channels:
+  - defaults
+dependencies:
+  - python=3.11.* 
+  - pip
+  - pip:
+      # - pedalboard
+      - pydub
+      - ffmpeg-python
+      - TTS
+      - faster-whisper
+      - edge-tts
+      - gradio
