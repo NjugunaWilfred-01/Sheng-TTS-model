@@ -72,7 +72,8 @@ def train_sheng_llm(
     learning_rate: float = 2e-4,
     batch_size: int = 4,
     lora_r: int = 16,
-    lora_alpha: int = 32
+    lora_alpha: int = 32,
+    gradient_checkpointing: bool = False
 ):
     logger.info(f"🚀 Initializing Sheng LLM LoRA Fine-Tuning on '{model_name}'...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -84,8 +85,13 @@ def train_sheng_llm(
         tokenizer.pad_token = tokenizer.eos_token
 
     # 2. Load Base Model
+    # bf16 where the GPU supports it. Qwen is known to produce NaN losses under
+    # fp16 because its activations exceed fp16 range; bf16 has the same exponent
+    # range as fp32 and sidesteps that entirely.
+    use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
+        dtype=torch.bfloat16 if use_bf16 else None,
         device_map="auto" if torch.cuda.is_available() else None,
         trust_remote_code=True
     )
@@ -129,8 +135,12 @@ def train_sheng_llm(
         logging_steps=5,
         save_strategy="epoch",
         eval_strategy="epoch" if len(eval_set) > 0 else "no",
-        save_total_limit=2,
-        fp16=torch.cuda.is_available(),
+        # save_total_limit=1: PEFT checkpoints are adapter-only and small, but this
+        # trains on shared boxes where disk is often the binding constraint.
+        save_total_limit=1,
+        bf16=use_bf16,
+        fp16=torch.cuda.is_available() and not use_bf16,
+        gradient_checkpointing=gradient_checkpointing,
         report_to="none",
         dataloader_num_workers=0
     )
@@ -157,6 +167,8 @@ def train_sheng_llm(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sheng LLM Fine-Tuning Recipe")
+    parser.add_argument("--gradient_checkpointing", action="store_true",
+                        help="Trade compute for VRAM. Needed for larger bases on a busy GPU.")
     parser.add_argument("--model_name", type=str, default="Qwen/Qwen2.5-0.5B-Instruct")
     parser.add_argument("--train_jsonl", type=str, default="dataset/train_sheng_sft.jsonl")
     parser.add_argument("--output_dir", type=str, default="llm_sheng_lora_output")
@@ -171,5 +183,6 @@ if __name__ == "__main__":
         output_dir=args.output_dir,
         num_epochs=args.epochs,
         batch_size=args.batch_size,
-        learning_rate=args.lr
+        learning_rate=args.lr,
+        gradient_checkpointing=args.gradient_checkpointing
     )
