@@ -10,9 +10,16 @@ Usage:
     python scripts/prefetch_models.py --model small     # override
 """
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
+
+# Must be set BEFORE huggingface_hub is imported. Its Xet transfer backend failed
+# here mid-download with "CAS Client Error: Format error: I/O error: error decoding
+# response body", leaving a partial cache and no usable model. The plain HTTP path
+# completed the same download without trouble. Override by exporting the var yourself.
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

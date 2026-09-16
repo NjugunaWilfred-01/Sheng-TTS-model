@@ -8,7 +8,7 @@ A low-latency, end-to-end **Speech-to-Speech** pipeline for **Standard Swahili a
 
 ```mermaid
 flowchart LR
-    A[🎤 User Microphone] --> B[Faster-Whisper ASR<br/>large-v3-turbo + word-list biasing]
+    A[🎤 User Microphone] --> B[Faster-Whisper ASR<br/>large-v3-turbo + prompt biasing + echo guard]
     B -->|raw transcript| C[normalize<br/>ASR error repair only]
     C -->|honest transcript| G[📝 Displayed to user]
     C --> D[slangify<br/>street register]
@@ -84,6 +84,12 @@ python scripts/generate_demo_audio.py    # demo prompts + fallback replies
 
 Skipping this means the first mic click downloads 1.6GB on venue wifi.
 
+`prefetch_models.py` sets `HF_HUB_DISABLE_XET=1` for you — HuggingFace's Xet transfer
+backend failed here mid-download (`CAS Client Error ... error decoding response body`)
+and left a partial cache; the plain HTTP path completed fine. If the download still
+will not finish, run with `WHISPER_MODEL_SIZE=small` and accept the quality drop rather
+than risk downloading live.
+
 ### 3. Point the brain at an API (recommended)
 
 ```bash
@@ -155,9 +161,14 @@ laptop. **Commit it or back it up.**
 
 ### What was fixed, and what that does not fix
 
-- **Prompt leakage.** The old `WHISPER_SHENG_PROMPT` was a fluent sentence, which
-  Whisper regurgitated verbatim as the transcript on 16/123 baseline clips (13%). It is
-  now a bare word list, plus a post-decode echo guard in `asr_engine.py`.
+- **Prompt leakage.** `WHISPER_SHENG_PROMPT` is a fluent sentence, which Whisper
+  regurgitated verbatim as the transcript on 16/123 baseline clips (13%). Handled by a
+  post-decode echo guard in `asr_engine.py` — 11/16 caught, 0 false positives.
+  A bare word-list prompt was tried as the fix and **reverted**: it measured worse
+  (WER 0.741 vs 0.699) because the decoder copies the prompt's *format*, yielding
+  list-shaped transcripts at 5x the comma density. See `scripts/ab_prompt_bias.py`.
+  Four of the five uncaught leaks are the string "Niaje chief, form ni gani leo
+  mtaani?", which is simultaneously a leak and a correct transcript — inseparable.
 - **Repetition loops.** `temperature` was a scalar `0.0`, which leaves
   `compression_ratio_threshold` with no hotter temperature to retry at — so detected
   garbage was kept anyway (one clip: "Ha ha ha" ×67, WER 44.6). It is now a fallback
