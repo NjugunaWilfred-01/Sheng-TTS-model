@@ -30,20 +30,44 @@ class ShengASREngine:
         self.model = None
         self._load_model()
 
+    # Tried in order when the configured model will not load. Smaller means worse
+    # Sheng accuracy, but a degraded transcriber beats a dead pipeline on stage.
+    FALLBACK_SIZES = ("small", "base", "tiny")
+
     def _load_model(self):
-        """Lazy loads the Faster-Whisper model."""
-        try:
-            from faster_whisper import WhisperModel
-            logger.info(f"Loading Whisper model '{self.model_size}' on device '{self.device}' ({self.compute_type})...")
-            self.model = WhisperModel(
-                self.model_size,
-                device=self.device,
-                compute_type=self.compute_type
-            )
-            logger.info("Whisper model loaded successfully.")
-        except Exception as e:
-            logger.error(f"Failed to load Faster-Whisper: {e}")
-            self.model = None
+        """
+        Load the Faster-Whisper model, degrading to a smaller one if necessary.
+
+        The configured default (large-v3-turbo, ~1.6GB) is fetched on first use, and
+        that download proved flaky here -- it failed once with a HuggingFace Xet
+        transfer error and once by stalling. Previously any such failure left
+        self.model as None and every transcribe() returned "ASR model not
+        initialized", i.e. total pipeline failure. Now we fall back through smaller
+        models, which are likely already cached, and report which one is live.
+        """
+        from faster_whisper import WhisperModel
+
+        candidates = [self.model_size] + [
+            s for s in self.FALLBACK_SIZES if s != self.model_size
+        ]
+        for size in candidates:
+            try:
+                logger.info(f"Loading Whisper '{size}' on {self.device} ({self.compute_type})...")
+                self.model = WhisperModel(size, device=self.device, compute_type=self.compute_type)
+                if size != self.model_size:
+                    logger.warning(
+                        f"Could not load '{self.model_size}'; running on '{size}' instead. "
+                        f"Transcription quality will be lower. Run "
+                        f"scripts/prefetch_models.py to cache the intended model."
+                    )
+                self.model_size = size
+                logger.info(f"Whisper model '{size}' loaded successfully.")
+                return
+            except Exception as e:
+                logger.error(f"Failed to load Whisper '{size}': {e}")
+
+        logger.error("No Whisper model could be loaded. ASR is unavailable.")
+        self.model = None
 
     def _strip_prompt_echo(self, text: str) -> str:
         """
