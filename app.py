@@ -125,7 +125,10 @@ custom_css = """
 .demo-btn { margin-bottom: 5px; }
 """
 
-with gr.Blocks(title="Swahili & Sheng S2S Agent", theme=gr.themes.Soft(), css=custom_css) as demo:
+# theme/css belong on launch() from Gradio 6.0 on. They still work on Blocks, but
+# passing them there prints a deprecation warning at startup -- not what you want
+# scrolling past while an audience watches the app boot.
+with gr.Blocks(title="Swahili & Sheng S2S Agent") as demo:
     with gr.Column(elem_classes=["container"]):
         gr.Markdown(
             """
@@ -231,5 +234,7 @@ if __name__ == "__main__":
     demo.launch(
         server_name=GRADIO_SERVER_NAME,
         server_port=GRADIO_SERVER_PORT,
-        share=False
+        share=False,
+        theme=gr.themes.Soft(),
+        css=custom_css
     )
