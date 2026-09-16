@@ -13,7 +13,7 @@ from sheng_lexicon import SHENG_DICTIONARY
 print("🚀 Initializing Swahili & Sheng S2S Pipeline...")
 s2s_pipeline = SpeechToSpeechPipeline()
 
-DEMO_SAMPLES = {
+_DEMO_SAMPLE_CANDIDATES = {
     "🌟 1. Greeting & Rada": str(BASE_DIR / "assets" / "demo_samples" / "demo_1_greeting.mp3"),
     "💼 2. Work & Hustle": str(BASE_DIR / "assets" / "demo_samples" / "demo_5_work.mp3"),
     "🍲 3. Lunch at Kibanda": str(BASE_DIR / "assets" / "demo_samples" / "demo_2_food.mp3"),
@@ -22,9 +22,22 @@ DEMO_SAMPLES = {
     "👟 6. Luku & Drip": str(BASE_DIR / "assets" / "demo_samples" / "demo_4_drip.mp3")
 }
 
+# demo_1_greeting.mp3 was referenced but had never been committed, so the very first
+# demo button handed Gradio a non-existent path. Filter at import instead of trusting
+# the dict: scripts/generate_demo_audio.py regenerates any missing file.
+DEMO_SAMPLES = {k: v for k, v in _DEMO_SAMPLE_CANDIDATES.items() if Path(v).exists()}
+_MISSING_SAMPLES = sorted(set(_DEMO_SAMPLE_CANDIDATES) - set(DEMO_SAMPLES))
+if _MISSING_SAMPLES:
+    print(f"⚠️  Missing demo audio (buttons disabled): {_MISSING_SAMPLES}")
+    print("   Run: python scripts/generate_demo_audio.py")
+
 BACKEND_OPTIONS = {
-    "Instant Heuristic Sheng Brain (<2ms Latency)": "heuristic",
-    "Fine-Tuned Sheng LoRA (Qwen2.5-Instruct)": "lora"
+    # API first: it is the only backend that holds a real multi-turn conversation.
+    # ShengLLMEngine falls back to heuristic by itself if the key is missing or the
+    # call fails, so selecting this can never hard-fail the demo.
+    "Live Sheng Brain (API - best quality)": "openai",
+    "Instant Heuristic Sheng Brain (<2ms, offline)": "heuristic",
+    "Fine-Tuned Sheng LoRA (Qwen2.5-0.5B, local)": "lora"
 }
 
 
@@ -44,7 +57,7 @@ def process_voice_turn(audio_input, voice_choice, rate_pct, pitch_hz, backend_ch
         )
 
     voice_id = VOICE_OPTIONS.get(voice_choice, DEFAULT_VOICE)
-    backend_id = BACKEND_OPTIONS.get(backend_choice, "lora")
+    backend_id = BACKEND_OPTIONS.get(backend_choice, "openai")
     rate_str = f"{'+' if rate_pct >= 0 else ''}{int(rate_pct)}%"
     pitch_str = f"{'+' if pitch_hz >= 0 else ''}{int(pitch_hz)}Hz"
 

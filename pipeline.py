@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 from asr_engine import ShengASREngine
 from llm_engine import ShengLLMEngine
 from tts_engine import ShengTTSEngine
+from sheng_lexicon import ShengNormalizer
 from config import DEFAULT_VOICE, AUDIO_TEMP_DIR
 
 logging.basicConfig(level=logging.INFO)
@@ -64,7 +65,12 @@ class SpeechToSpeechPipeline:
             }
 
         # Step 2: Sheng Dialogue Brain (LLM)
-        bot_reply, llm_meta = self.llm.generate_response(normalized_text)
+        # normalized_text is the honest transcript (ASR fixes only) and is what we
+        # display. slangify() additionally rewrites standard Swahili into street
+        # register -- useful to prime the LLM, but it changes meaning-bearing words,
+        # so it must never reach the UI, WER scoring, or a training label.
+        llm_input = ShengNormalizer.slangify(normalized_text)
+        bot_reply, llm_meta = self.llm.generate_response(llm_input)
 
         # Step 3: Kenyan Neural Voice Synthesis (TTS)
         out_filename = f"s2s_response_{int(time.time() * 1000)}.mp3"

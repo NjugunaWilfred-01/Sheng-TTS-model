@@ -30,3 +30,11 @@ temp_audio/
 .idea/
 .DS_Store
 *.swp
+
+# Virtual environments (a committed venv is machine- and OS-specific and never works
+# on another box -- new_venv/ was a Linux venv with home=/usr/bin, 39MB of dead weight)
+new_venv/
+.venv*/
+
+# Generated at runtime -- regenerate with scripts/generate_demo_audio.py
+results_decode_ab.json

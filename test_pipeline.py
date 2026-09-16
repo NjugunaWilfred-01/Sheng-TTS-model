@@ -27,8 +27,27 @@ def run_tests():
     ]
     for inp, expected in test_cases:
         norm = ShengNormalizer.normalize(inp)
-        assert norm == expected, f"Expected '{expected}', got '{norm}'"
-        print(f"  ✓ '{inp}' -> '{norm}'")
+        assert norm == expected, f"normalize: expected '{expected}', got '{norm}'"
+        print(f"  ✓ normalize '{inp}' -> '{norm}'")
+
+    # slangify() layers street register on top of normalize(). LLM input path only --
+    # it swaps meaning-bearing words, so it must never reach the UI, WER scoring, or
+    # a training label. These fixtures used to fail against normalize() because the
+    # old single-stage map slang-substituted mid-repair.
+    slang_cases = [
+        ("ni aje ba zenga", "niaje chief"),
+        ("nielekeze kwa cha paa", "nisho kwa dooh"),
+    ]
+    for inp, expected in slang_cases:
+        slang = ShengNormalizer.slangify(inp)
+        assert slang == expected, f"slangify: expected '{expected}', got '{slang}'"
+        print(f"  ✓ slangify  '{inp}' -> '{slang}'")
+
+    # A correct sentence must survive normalize() untouched. This is the property
+    # that keeps WER honest and keeps fine-tuning labels faithful to the audio.
+    clean = "panda nganya pale stage alafu unisho"
+    assert ShengNormalizer.normalize(clean) == clean, "normalize() corrupted clean text"
+    print("  ✓ clean text survives normalize() unchanged")
     print("  -> Sheng Normalizer passed!\n")
 
     # Test 2: TTS Synthesis

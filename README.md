@@ -1,6 +1,6 @@
 # 🇰🇪 Swahili & Sheng Speech-to-Speech (S2S) Agent
 
-A lightweight, low-latency, end-to-end **Speech-to-Speech (S2S)** pipeline designed specifically for **Standard Swahili & Nairobi Sheng** (Kenyan urban creole).
+A low-latency, end-to-end **Speech-to-Speech** pipeline for **Standard Swahili and Nairobi Sheng** (Kenyan urban creole). Speak into a mic, get a spoken Sheng reply from a Kenyan neural voice.
 
 ---
 
@@ -8,69 +8,183 @@ A lightweight, low-latency, end-to-end **Speech-to-Speech (S2S)** pipeline desig
 
 ```mermaid
 flowchart LR
-    A[🎤 User Microphone] --> B[Faster-Whisper ASR<br/>+ Sheng Prompt Biasing]
-    B -->|Transcribed Text| C[Sheng Normalizer<br/>Regex & Slang Rules]
-    C -->|Normalized Sheng| D[Sheng LLM Brain<br/>Nairobi Urban Persona]
-    D -->|Colloquial Response| E[Edge-TTS<br/>Kenyan Neural Voices]
-    E --> F[🔊 Spoken Audio Output]
+    A[🎤 User Microphone] --> B[Faster-Whisper ASR<br/>large-v3-turbo + word-list biasing]
+    B -->|raw transcript| C[normalize<br/>ASR error repair only]
+    C -->|honest transcript| G[📝 Displayed to user]
+    C --> D[slangify<br/>street register]
+    D -->|LLM prompt| E[Sheng LLM Brain<br/>API / heuristic / LoRA]
+    E -->|reply + emotion| F[naturalizer<br/>filler, pause, prosody]
+    F --> H[Edge-TTS Kenyan voice<br/>+ pedalboard polish]
+    H --> I[🔊 Spoken Audio Output]
 ```
 
-1. **ASR (Speech-to-Text)**: `faster-whisper` with contextual prompt conditioning using ~50 core Sheng keywords.
-2. **Sheng Normalizer**: Fast regex mapping handling colloquial spelling variants (*chapaa*, *bazenga*, *mbogi*, *rada*).
-3. **Conversational LLM**: Multi-backend engine supporting offline heuristic banter, OpenAI/Groq/Ollama, or Gemini API.
-4. **TTS (Text-to-Speech)**: Microsoft Edge-TTS Kenyan voices (`sw-KE-RafikiNeural` / `sw-KE-ZuriNeural`).
-5. **Interactive UI**: `Gradio` Web UI with real-time waveform input, latency breakdown, and audio playback.
+**The two-stage text path is deliberate.** `normalize()` only repairs what the ASR got
+wrong — token splits (`ni aje` → `niaje`), phonetic corruptions (`radah` → `rada`). It
+never swaps one word for another, so it is safe for display, for WER scoring, and as a
+fine-tuning label. `slangify()` additionally rewrites standard Swahili into street
+register (`nielekeze` → `nisho`), which **changes meaning-bearing words** — so it is
+applied *only* on the way into the LLM and never reaches the UI or a training target.
 
 ---
 
 ## 📁 Project Structure
 
 ```
-Sheng_pipe/
-├── config.py             # System paths, models, and voice settings
-├── sheng_lexicon.py      # ~80 Sheng words, normalizer rules, prompt biasing & persona
-├── asr_engine.py         # Faster-Whisper ASR engine with Sheng context conditioning
-├── tts_engine.py         # Kenyan neural TTS synthesizer (Rafiki / Zuri)
-├── llm_engine.py         # Conversational brain (Heuristic, OpenAI, Ollama, Gemini)
-├── pipeline.py           # End-to-End audio-to-audio orchestrator with latency tracking
-├── app.py                # Interactive Gradio Web Application
-├── test_pipeline.py      # Automated pipeline verification test suite
-├── requirements.txt      # Python dependencies
-└── temp_audio/           # Temporary audio buffer directory
+Sheng-TTS-model/
+├── config.py                 # Paths, model sizes, voices, backend selection
+├── sheng_lexicon.py          # Lexicon, ASR_CORRECTION_RULES, SHENG_SLANG_RULES, persona
+├── naturalizer.py            # Fillers, pauses, follow-ups, per-emotion prosody
+├── asr_engine.py             # Faster-Whisper + prompt biasing + echo guard
+├── llm_engine.py             # Brain: API (default) / heuristic / local LoRA
+├── tts_engine.py             # Edge-TTS Kenyan voices + pedalboard polish
+├── pipeline.py               # Audio → ASR → LLM → TTS orchestrator, latency tracking
+├── app.py                    # Gradio web UI
+├── cli.py                    # Terminal fallback UI
+├── eval_asr.py               # Batch WER/CER evaluation
+├── test_pipeline.py          # Component verification suite
+├── scripts/
+│   ├── prefetch_models.py    # Cache Whisper weights BEFORE the demo
+│   ├── generate_demo_audio.py# Demo prompts + canned fallback replies
+│   └── ab_decode_config.py   # Verify decode-config fixes on real clips
+├── assets/
+│   ├── demo_samples/         # 6 preset demo prompts
+│   └── fallback/             # 6 canned bot replies (stage safety net)
+├── data_engine/              # Audio preprocessing, pseudo-labeling, cleaning
+├── training/                 # Whisper + LLM LoRA fine-tuning
+└── dataset/                  # Segmented clips and manifests
 ```
 
 ---
 
 ## ⚡ Quick Start
 
-### 1. Install Dependencies
+### 1. Install
+
+Python **3.11** is required (`faster-whisper`/`ctranslate2` have no 3.14 wheels).
+
 ```bash
-cd /home/ray/Desktop/Sheng_pipe
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Run Test Suite
-Verify that all components (Normalizer, TTS, LLM, ASR) are functioning:
+`ffmpeg` must be on PATH — it is a system package, not a pip one:
+
 ```bash
-python test_pipeline.py
+winget install Gyan.FFmpeg     # Windows
+brew install ffmpeg            # macOS
+sudo apt install ffmpeg        # Linux
 ```
 
-### 3. Launch Interactive Web UI
+### 2. Prefetch models and audio — **do this the night before a demo**
+
 ```bash
-python app.py
+python scripts/prefetch_models.py        # ~1.6GB Whisper download, cached
+python scripts/generate_demo_audio.py    # demo prompts + fallback replies
 ```
-Open your browser at `http://localhost:7860` to speak with the agent!
+
+Skipping this means the first mic click downloads 1.6GB on venue wifi.
+
+### 3. Point the brain at an API (recommended)
+
+```bash
+export LLM_BACKEND=openai
+export OPENAI_API_KEY="gsk_...your-groq-key..."
+# defaults already target Groq's OpenAI-compatible endpoint + llama-3.3-70b-versatile
+```
+
+Without a key the engine falls back to the offline heuristic automatically — it never
+hard-fails, it just gets shallower.
+
+### 4. Verify, then run
+
+```bash
+python test_pipeline.py     # normalizer, TTS, LLM, ASR
+python app.py               # → http://localhost:7860
+python cli.py --demo        # terminal fallback if Gradio misbehaves
+```
 
 ---
 
-## 🎯 Saturday Demo Scenarios (6 Verified Tracks)
+## 🎯 Demo Scenarios
 
-| # | Scenario | Sample Spoken Input | Bot Spoken Response |
-|---|---|---|---|
-| 1 | **Greeting & Rada** | *"Niaje chief, form ni gani leo mtaani?"* | *"Form ni kuchill tu kejani na mbogi, tukipiga stori za luku na hustle. Rada yako?"* |
-| 2 | **Work & Hustle** | *"Hustle inaendeleaje leo chief?"* | *"Kazi inasonga fiti sana chief, tunang'ang'ana kusaka dooh bila kuogopa!"* |
-| 3 | **Kibanda Lunch** | *"Niko na chwani nataka kubuy lunch, unapendekeza nini?"* | *"Hiyo chwani utapata chapo mbili safi na madondo kwa kibanda ya mtaa. Utashiba fiti sana!"* |
-| 4 | **Nganya to Tao** | *"Nisho pahali keja yako iko ndio nipanda nganya tao."* | *"Panda tu nganya pale stage, shuka tao alafu unisho kwa simu nikupe rada safi ya street!"* |
-| 5 | **Weekend Vibes** | *"Hii weekend form iko wapi?"* | *"Weekend ni kupika luku, kutokea pale alchemist na kuparty like there is no tomorrow!!"* |
-| 6 | **Luku & Drip** | *"Hizo viatu mpya zinakutoa aje?"* | *"Hizo raba zimepiga luku hatari msee, unakaa chief mwenyewe!"* |
+| # | Scenario | Spoken Input |
+|---|---|---|
+| 1 | **Greeting & Rada** | *"Niaje chief, form ni gani leo mtaani?"* |
+| 2 | **Work & Hustle** | *"Hustle inaendeleaje leo chief?"* |
+| 3 | **Kibanda Lunch** | *"Niko na chwani nataka kubuy lunch, unapendekeza nini?"* |
+| 4 | **Nganya to Tao** | *"Nisho pahali keja yako iko ndio nipande nganya tao."* |
+| 5 | **Weekend Vibes** | *"Hii weekend form iko wapi?"* |
+| 6 | **Luku & Drip** | *"Hizo viatu mpya zinakutoa aje?"* |
 
+Bot replies are **not** fixed — every heuristic intent carries 3–4 variants, and
+`naturalizer.humanize()` adds a filler, a breath pause, and sometimes a follow-up
+question, so repeating a scenario does not reproduce identical audio.
+
+---
+
+## ⚠️ Known Limitations
+
+Read this before promising anything about accuracy.
+
+### ASR is the weak half, and it is a data problem
+
+On the only human-referenced evaluation we have (`results_baseline.csv`, 123 clips,
+`whisper-small` + sentence-form prompt biasing):
+
+| Metric | Value |
+|---|---|
+| Median WER | **1.00** |
+| Mean WER (valid references) | 1.94 |
+| Clips with WER ≤ 0.3 | **0 / 123** |
+| Best single clip | WER 0.40 |
+
+**Zero clips of hand-verified transcription exist in this repo.** The 349-clip
+`dataset/validation_manifest.jsonl` is labelled `CLEAN_VALID`, but `clean_sheng_text`
+is byte-identical to `normalized_sheng` for all 349 records — it is regex output, not
+human correction. No Whisper fine-tune should be attempted on it: training on
+pseudo-labels teaches the model to reproduce its own errors.
+
+Two decoder-level bugs contributing to the above have been fixed (see below), but they
+are not the whole gap. Closing it requires hand-verified transcripts.
+
+### The evaluation set is not in the repo
+
+`eval_asr.py` reads `zoza_transcripts/mapped_data`, which was never committed. It is the
+only human-transcribed Sheng data the project has and it currently exists on one
+laptop. **Commit it or back it up.**
+
+### What was fixed, and what that does not fix
+
+- **Prompt leakage.** The old `WHISPER_SHENG_PROMPT` was a fluent sentence, which
+  Whisper regurgitated verbatim as the transcript on 16/123 baseline clips (13%). It is
+  now a bare word list, plus a post-decode echo guard in `asr_engine.py`.
+- **Repetition loops.** `temperature` was a scalar `0.0`, which leaves
+  `compression_ratio_threshold` with no hotter temperature to retry at — so detected
+  garbage was kept anyway (one clip: "Ha ha ha" ×67, WER 44.6). It is now a fallback
+  tuple.
+- **Model.** `small` → `large-v3-turbo`.
+
+These remove specific failure modes. They do not make the transcriber reliable on
+open-ended conversational Sheng.
+
+### Other limits
+
+- **Latency.** CPU-only inference runs well over the 3s glass-to-glass target; the
+  baseline averaged 6.8s/clip on `small`. A GPU, or shorter utterances, is the fix.
+- **The local LoRA is weak.** `llm_sheng_lora_output/` is Qwen2.5-**0.5B** trained on
+  150 samples. It memorises rather than generalises. Prefer the API backend.
+- **`dataset/*.jsonl` carries absolute Linux paths** (`/home/ray/...`). Use the
+  `relative_path` field, which resolves correctly on any machine.
+- **Sheng is generational and neighbourhood-specific.** The lexicon reflects one
+  register; vocabulary from a different age group or estate will not be covered.
+
+---
+
+## 🔁 Stage Fallback Order
+
+If something breaks during a live demo, in this order:
+
+1. **LLM fails** → happens automatically; the engine drops to the offline heuristic.
+2. **ASR garbage** → switch the backend dropdown to heuristic and type input via `cli.py`.
+3. **Pipeline dies** → play `assets/fallback/*.mp3`, the six canned replies.
+4. **Gradio won't load** → `python cli.py --demo`.

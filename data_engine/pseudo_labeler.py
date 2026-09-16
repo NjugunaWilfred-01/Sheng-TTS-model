@@ -22,7 +22,10 @@ logger = logging.getLogger("PseudoLabeler")
 
 
 class ShengPseudoLabeler:
-    def __init__(self, model_size: str = "small"):
+    def __init__(self, model_size: str = "large-v3"):
+        # large-v3, NOT "small". Pseudo-labels are the starting point a human then
+        # corrects, so label quality here sets the ceiling for the whole dataset.
+        # Use the largest model that fits -- this runs offline, latency is irrelevant.
         self.asr = ShengASREngine(model_size=model_size)
 
     def label_directory(

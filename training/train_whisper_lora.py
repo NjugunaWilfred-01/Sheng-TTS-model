@@ -62,7 +62,15 @@ def prepare_dataset_from_jsonl(jsonl_path: str, processor: Any):
     processed_data = []
     for item in records:
         audio_path = item["audio_filepath"]
-        text = item["normalized_text"]
+        # Label priority: a human-verified transcript beats everything. Fall back to
+        # the ASR-corrected text, NEVER to a slang-substituted field -- slangify()
+        # swaps meaning-bearing words ("nielekeze" -> "nisho"), so training on it
+        # teaches Whisper to emit words that were never spoken.
+        text = (item.get("verified_text")
+                or item.get("normalized_text")
+                or item.get("raw_transcription", ""))
+        if not text.strip():
+            continue
 
         if not Path(audio_path).exists() or not text:
             continue
@@ -101,7 +109,7 @@ def prepare_dataset_from_jsonl(jsonl_path: str, processor: Any):
 
 
 def run_training(
-    model_name: str = "openai/whisper-tiny",
+    model_name: str = "openai/whisper-small",
     train_jsonl: str = "dataset/train_sheng_asr.jsonl",
     output_dir: str = "whisper_sheng_lora_output",
     num_epochs: int = 5,
@@ -207,7 +215,8 @@ def run_training(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Whisper PEFT LoRA Fine-Tuning for Sheng")
-    parser.add_argument("--model_name", type=str, default="openai/whisper-tiny")
+    # whisper-tiny is too small to learn Sheng; it just overfits. small is the floor.
+    parser.add_argument("--model_name", type=str, default="openai/whisper-small")
     parser.add_argument("--train_jsonl", type=str, default="dataset/train_sheng_asr.jsonl")
     parser.add_argument("--output_dir", type=str, default="whisper_sheng_lora_output")
     parser.add_argument("--epochs", type=int, default=3)

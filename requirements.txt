@@ -1,9 +1,31 @@
+# --- Core runtime (needed to run app.py / cli.py / pipeline.py) ---
 faster-whisper>=1.0.0
 edge-tts>=6.1.10
 gradio>=4.0.0
 soundfile>=0.12.1
 pydub>=0.25.1
 numpy>=1.24.0
-torch>=2.0.0
 requests>=2.31.0
 python-dotenv>=1.0.0
+
+# Audio post-processing in ShengTTSEngine._polish(). Without it the polish step is
+# silently skipped (the import is wrapped in try/except) and the voice goes back to
+# sounding like a recording made in a vacuum -- so it belongs in core, not extras.
+pedalboard>=0.9.0
+
+# --- Evaluation (eval_asr.py) ---
+jiwer>=3.0.0
+
+# --- Local LoRA backend + training only. Not needed for the API/heuristic demo
+#     path; install with: pip install -r requirements-train.txt ---
+# torch>=2.0.0
+# transformers>=4.40.0
+# peft>=0.10.0
+# datasets>=2.18.0
+# librosa>=0.10.0
+# accelerate>=0.29.0
+
+# System dependency, not pip-installable: ffmpeg must be on PATH.
+#   Windows: winget install Gyan.FFmpeg
+#   macOS:   brew install ffmpeg
+#   Linux:   sudo apt install ffmpeg

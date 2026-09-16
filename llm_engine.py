@@ -12,6 +12,7 @@ from config import (
     GEMINI_API_KEY, OLLAMA_BASE_URL, OLLAMA_MODEL
 )
 from sheng_lexicon import SHENG_SYSTEM_PROMPT, FEW_SHOT_CONVERSATIONS, HEURISTIC_INTENTS
+from naturalizer import humanize, detect_emotion
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ShengLLMEngine")
@@ -51,7 +52,13 @@ class ShengLLMEngine:
             backend_used = "heuristic (fallback)"
             reply = self._generate_heuristic(user_message)
 
-        # Update conversation history
+        # Emotion is read from what the USER said, not from the reply: the bot
+        # should answer an excited question with energy even if its own wording is
+        # flat. pipeline.py feeds meta["emotion"] to vary_prosody().
+        emotion = detect_emotion(user_message)
+        reply = humanize(reply, emotion=emotion)
+
+        # History stores the humanized reply so follow-up turns see the same voice.
         self.conversation_history.append({"role": "user", "content": user_message})
         self.conversation_history.append({"role": "assistant", "content": reply})
 
@@ -59,7 +66,8 @@ class ShengLLMEngine:
         metadata = {
             "backend": backend_used,
             "llm_time_ms": round(duration * 1000, 2),
-            "response_length": len(reply)
+            "response_length": len(reply),
+            "emotion": emotion
         }
         logger.info(f"LLM generated ({backend_used}) in {metadata['llm_time_ms']}ms: '{reply}'")
         return reply, metadata
@@ -71,9 +79,13 @@ class ShengLLMEngine:
             if pattern.search(text_lower):
                 return random.choice(responses)
 
-        # Default witty Sheng fallback responses
+        # No intent matched. Several variants, because "I didn't understand" is the
+        # line most likely to fire twice in a row on stage.
         fallbacks = [
-            "Wazi chief! Sijakupata fiti but ebu jaribu kuieka na njia ingine."
+            "Wazi chief! Sijakupata fiti, but ebu jaribu kuieka na njia ingine.",
+            "Maze sijashika hiyo vizuri. Rudia tena pole pole?",
+            "Eeeh, hiyo imenipita kidogo chief. Unamaanisha aje?",
+            "Sikukupata poa msee. Ebu nisho tena kwa maneno mengine.",
         ]
         return random.choice(fallbacks)
 
@@ -158,7 +170,7 @@ class ShengLLMEngine:
             self._lora_tokenizer = AutoTokenizer.from_pretrained(adapter_path, trust_remote_code=True)
             base_model = AutoModelForCausalLM.from_pretrained(
                 peft_config.base_model_name_or_path,
-                torch_dtype=torch.float32,
+                torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
                 device_map="auto" if torch.cuda.is_available() else None,
                 trust_remote_code=True
             )
@@ -177,14 +189,19 @@ class ShengLLMEngine:
 
         prompt_text = self._lora_tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self._lora_tokenizer(prompt_text, return_tensors="pt")
+        inputs = {k: v.to(self._lora_model.device) for k, v in inputs.items()}
 
         with torch.no_grad():
             output_ids = self._lora_model.generate(
                 **inputs,
-                max_new_tokens=60,
-                temperature=0.7,
-                top_p=0.9,
+                max_new_tokens=120,
+                temperature=0.8,
+                top_p=0.92,
                 do_sample=True,
+                # A 0.5B adapter trained on 150 samples loops badly without these.
+                # Repetition penalty is the single biggest fix for that.
+                repetition_penalty=1.15,
+                no_repeat_ngram_size=3,
                 pad_token_id=self._lora_tokenizer.eos_token_id
             )
 

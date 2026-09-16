@@ -15,10 +15,21 @@ logger = logging.getLogger("ShengTTSEngine")
 
 
 class ShengTTSEngine:
-    def __init__(self, default_voice: str = DEFAULT_VOICE, default_rate: str = DEFAULT_RATE, default_pitch: str = DEFAULT_PITCH):
+    def __init__(
+        self,
+        default_voice: str = DEFAULT_VOICE,
+        default_rate: str = DEFAULT_RATE,
+        default_pitch: str = DEFAULT_PITCH,
+        request_timeout_sec: float = 12.0,
+        max_attempts: int = 3,
+    ):
         self.default_voice = default_voice
         self.default_rate = default_rate
         self.default_pitch = default_pitch
+        # 12s: comfortably above a healthy synthesis (~1.5-2.5s) and well under the
+        # point where an audience notices the pipeline has died.
+        self.request_timeout_sec = request_timeout_sec
+        self.max_attempts = max_attempts
 
     async def synthesize_async(
         self,
@@ -47,22 +58,47 @@ class ShengTTSEngine:
             if not cleaned_text:
                 return "", {"error": "Empty text"}
 
-            communicate = edge_tts.Communicate(
-                text=cleaned_text,
-                voice=selected_voice,
-                rate=selected_rate,
-                pitch=selected_pitch
-            )
-            await communicate.save(str(output_path))
-                # Edge-TTS writes mp3. Convert to wav, polish, convert back.
+            # Edge-TTS is a NETWORK service, not a local model, and it throttles.
+            # Measured on three identical calls: 47s, 28s, 2.2s. An unbounded await
+            # means one stalled request hangs the whole demo, so cap each attempt and
+            # retry rather than waiting out a stall.
+            for attempt in range(1, self.max_attempts + 1):
+                communicate = edge_tts.Communicate(
+                    text=cleaned_text,
+                    voice=selected_voice,
+                    rate=selected_rate,
+                    pitch=selected_pitch
+                )
+                try:
+                    await asyncio.wait_for(
+                        communicate.save(str(output_path)),
+                        timeout=self.request_timeout_sec,
+                    )
+                    break
+                except Exception as e:  # includes asyncio.TimeoutError
+                    if attempt == self.max_attempts:
+                        raise
+                    logger.warning(
+                        f"Edge-TTS attempt {attempt}/{self.max_attempts} failed "
+                        f"({type(e).__name__}); retrying."
+                    )
+
+            # Edge-TTS writes mp3. Round-trip through wav so pedalboard can polish it.
             if str(output_path).endswith(".mp3"):
                 from pydub import AudioSegment
                 wav_path = str(output_path).replace(".mp3", ".wav")
                 AudioSegment.from_mp3(str(output_path)).export(wav_path, format="wav")
                 self._polish(wav_path)
                 AudioSegment.from_wav(wav_path).export(str(output_path), format="mp3")
-                import os; os.remove(wav_path)
-                duration = time.time() - start_time
+                import os
+                os.remove(wav_path)
+            else:
+                self._polish(str(output_path))
+
+            # Must sit OUTSIDE the branch above: it used to be assigned only on the
+            # mp3 path, so any other extension raised NameError, which the except
+            # below swallowed into a silent empty-audio failure.
+            duration = time.time() - start_time
 
             metadata = {
                 "voice": selected_voice,
@@ -125,5 +161,3 @@ class ShengTTSEngine:
         with AudioFile(path, "w", sr, polished.shape[0]) as f:
             f.write(polished)   
 
-
-Optional_Path = Any
