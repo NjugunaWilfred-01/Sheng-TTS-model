@@ -9,7 +9,11 @@ from pathlib import Path
 from typing import List, Dict, Any, Tuple
 import soundfile as sf
 import numpy as np
-from pydub import AudioSegment, silence
+from pydub import AudioSegment
+
+# Silero VAD - neural voice activity detection (replaces pydub silence detection)
+import torch
+from silero_vad import load_silero_vad, get_speech_timestamps, read_audio
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AudioPreprocessor")
@@ -21,14 +25,18 @@ class ShengAudioPreprocessor:
         target_sr: int = 16000,
         min_chunk_duration_sec: float = 2.0,
         max_chunk_duration_sec: float = 15.0,
-        silence_thresh_db: int = -36,
-        min_silence_len_ms: int = 400
+        min_speech_duration_ms: int = 1500,
+        max_speech_duration_s: float = 15.0,
+        min_silence_duration_ms: int = 400
     ):
         self.target_sr = target_sr
         self.min_chunk_sec = min_chunk_duration_sec
         self.max_chunk_sec = max_chunk_duration_sec
-        self.silence_thresh_db = silence_thresh_db
-        self.min_silence_len_ms = min_silence_len_ms
+        self.min_speech_duration_ms = min_speech_duration_ms
+        self.max_speech_duration_s = max_speech_duration_s
+        self.min_silence_duration_ms = min_silence_duration_ms
+        # Load Silero VAD model once
+        self.vad_model = load_silero_vad()
 
     def normalize_audio(self, audio_path: str, output_path: str = None) -> str:
         """Converts audio to 16kHz Mono PCM WAV and normalizes volume."""
@@ -47,54 +55,44 @@ class ShengAudioPreprocessor:
 
     def chunk_audio_by_vad(self, audio_path: str, output_dir: str) -> List[Dict[str, Any]]:
         """
-        Splits long audio into conversational turns/chunks using silence detection.
+        Splits long audio into conversational turns/chunks using Silero VAD.
+        Silero is a neural VAD that detects speech, not loudness.
         Ensures all chunks are between min_chunk_sec and max_chunk_sec.
         """
         out_dir = Path(output_dir)
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        audio = AudioSegment.from_file(audio_path)
-        chunks = silence.split_on_silence(
-            audio,
-            min_silence_len=self.min_silence_len_ms,
-            silence_thresh=self.silence_thresh_db,
-            keep_silence=200
+        # Read audio with Silero's helper (resamples to target_sr automatically)
+        wav = read_audio(audio_path, sampling_rate=self.target_sr)
+        
+        # Get speech timestamps from Silero VAD
+        timestamps = get_speech_timestamps(
+            wav,
+            self.vad_model,
+            sampling_rate=self.target_sr,
+            min_speech_duration_ms=self.min_speech_duration_ms,
+            max_speech_duration_s=self.max_speech_duration_s,
+            min_silence_duration_ms=self.min_silence_duration_ms,
+            return_seconds=True,
         )
 
-        processed_chunks = []
-        accumulated_segment = AudioSegment.empty()
-        chunk_idx = 0
-
-        for segment in chunks:
-            duration_sec = len(segment) / 1000.0
-
-            # If segment is too short, accumulate it
-            if len(accumulated_segment) / 1000.0 + duration_sec < self.max_chunk_sec:
-                accumulated_segment += segment
-            else:
-                # Save accumulated segment if within valid range
-                if len(accumulated_segment) / 1000.0 >= self.min_chunk_sec:
-                    chunk_filename = f"chunk_{chunk_idx:05d}.wav"
-                    chunk_path = out_dir / chunk_filename
-                    accumulated_segment.export(str(chunk_path), format="wav")
-                    processed_chunks.append({
-                        "chunk_id": chunk_idx,
-                        "file_path": str(chunk_path),
-                        "duration_sec": round(len(accumulated_segment) / 1000.0, 2)
-                    })
-                    chunk_idx += 1
-                accumulated_segment = segment
-
-        # Handle remaining segment
-        if len(accumulated_segment) / 1000.0 >= self.min_chunk_sec:
-            chunk_filename = f"chunk_{chunk_idx:05d}.wav"
-            chunk_path = out_dir / chunk_filename
-            accumulated_segment.export(str(chunk_path), format="wav")
-            processed_chunks.append({
-                "chunk_id": chunk_idx,
-                "file_path": str(chunk_path),
-                "duration_sec": round(len(accumulated_segment) / 1000.0, 2)
+        processed = []
+        for idx, ts in enumerate(timestamps):
+            start, end = int(ts["start"] * self.target_sr), int(ts["end"] * self.target_sr)
+            segment = wav[start:end].numpy()
+            dur = (end - start) / self.target_sr
+            
+            # Skip chunks outside valid duration range
+            if dur < self.min_chunk_sec or dur > self.max_chunk_sec:
+                continue
+            
+            path = out_dir / f"chunk_{idx:05d}.wav"
+            sf.write(str(path), segment, self.target_sr)
+            processed.append({
+                "chunk_id": idx,
+                "file_path": str(path),
+                "duration_sec": round(dur, 2)
             })
 
-        logger.info(f"Generated {len(processed_chunks)} speech chunks in {output_dir}")
-        return processed_chunks
+        logger.info(f"Generated {len(processed)} speech chunks in {output_dir}")
+        return processed

@@ -22,7 +22,9 @@ logger = logging.getLogger("PseudoLabeler")
 
 
 class ShengPseudoLabeler:
-    def __init__(self, model_size: str = "small"):
+    def __init__(self, model_size: str = "large-v3"):
+        # Use large-v3 for significantly better accuracy on code-switched Sheng speech
+        # large-v3 is ~40x larger than tiny but dramatically better on Sheng
         self.asr = ShengASREngine(model_size=model_size)
 
     def label_directory(

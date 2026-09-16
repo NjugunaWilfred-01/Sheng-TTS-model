@@ -67,7 +67,9 @@ SHENG_CLEANING_RULES: List[Tuple[re.Pattern, str]] = [
     (re.compile(r"\bwa\s+zi\b", re.IGNORECASE), "wazi"),
     (re.compile(r"\blu\s+ku\b", re.IGNORECASE), "luku"),
     (re.compile(r"\bmanze\b", re.IGNORECASE), "maze"),
-    (re.compile(r"\bniaje,\s+keze\b", re.IGNORECASE), "nielekeze"),
+    # NOTE: Removed problematic rule: (r"\bniaje,\s+keze\b", "nielekeze")
+    # This was incorrectly mapping "niaje, keze" to "nielekeze" (direct me)
+    # which is wrong. Keze is a greeting, not a direction.
 
     # 6. Repetitive Artifacts Removal (Whisper looping glitch)
     (re.compile(r"(kwa\s+){3,}", re.IGNORECASE), "kwa "),
