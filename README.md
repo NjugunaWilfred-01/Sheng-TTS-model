@@ -8,7 +8,7 @@ A low-latency, end-to-end **Speech-to-Speech** pipeline for **Standard Swahili a
 
 ```mermaid
 flowchart LR
-    A[🎤 User Microphone] --> B[Faster-Whisper ASR<br/>large-v3-turbo + prompt biasing + echo guard]
+    A[🎤 User Microphone] --> B[Faster-Whisper ASR<br/>whisper-small + prompt biasing + echo guard]
     B -->|raw transcript| C[normalize<br/>ASR error repair only]
     C -->|honest transcript| G[📝 Displayed to user]
     C --> D[slangify<br/>street register]
@@ -78,11 +78,11 @@ sudo apt install ffmpeg        # Linux
 ### 2. Prefetch models and audio — **do this the night before a demo**
 
 ```bash
-python scripts/prefetch_models.py        # ~1.6GB Whisper download, cached
+python scripts/prefetch_models.py        # caches the Whisper weights
 python scripts/generate_demo_audio.py    # demo prompts + fallback replies
 ```
 
-Skipping this means the first mic click downloads 1.6GB on venue wifi.
+Skipping this means the first mic click downloads model weights on venue wifi.
 
 `prefetch_models.py` sets `HF_HUB_DISABLE_XET=1` for you — HuggingFace's Xet transfer
 backend failed here mid-download (`CAS Client Error ... error decoding response body`)
@@ -173,7 +173,15 @@ laptop. **Commit it or back it up.**
   `compression_ratio_threshold` with no hotter temperature to retry at — so detected
   garbage was kept anyway (one clip: "Ha ha ha" ×67, WER 44.6). It is now a fallback
   tuple.
-- **Model.** `small` → `large-v3-turbo`.
+- **Model: stayed on `small`, measured.** `large-v3-turbo` was tried and is worse
+  here. On the six demo clips it had better *raw* WER (0.593 vs 0.699) yet worse
+  end-to-end WER (0.376 vs 0.139) and ran 4.2x slower (14.88s vs 3.58s per clip,
+  RTF 4.52 vs 1.09). Two causes: it cannot keep up with real time on CPU, and
+  `ASR_CORRECTION_RULES` are tuned to the errors *`small`* makes, so they do not
+  fire on turbo's different mistakes and it never gets the ~5x normalizer gain.
+  **The correction rules are coupled to the model** — changing `WHISPER_MODEL_SIZE`
+  invalidates them. On a GPU, turbo's better raw WER would likely win; re-derive
+  the rules first.
 
 These remove specific failure modes. They do not make the transcriber reliable on
 open-ended conversational Sheng.

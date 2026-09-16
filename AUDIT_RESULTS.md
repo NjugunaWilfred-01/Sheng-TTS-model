@@ -126,7 +126,8 @@ vocabulary users say.
 ## 6. Fixes applied
 
 **ASR** — `temperature` scalar → fallback tuple; added `log_prob_threshold`; post-decode
-echo guard; `small` → `large-v3-turbo`.
+echo guard; graceful degradation through `small → base → tiny` when a model will not
+load. Model default **stayed on `small`** — see §9.
 
 **Text pipeline** — split the single-stage map into `ASR_CORRECTION_RULES` (lossless
 repairs, safe for display / WER / training labels) and `SHENG_SLANG_RULES`
@@ -189,9 +190,41 @@ Sheng reliable. Closing that gap needs hand-verified transcripts, which do not e
 **Biggest remaining risks on stage:**
 1. **Latency.** CPU-only, ~3.6s ASR on `small` and more on `large-v3-turbo`. Keep every
    spoken input to 3–5 seconds, as `DEMO_SCRIPT.md` says.
-2. **The `large-v3-turbo` download is flaky on this network** — it failed once with a
-   HuggingFace Xet transfer error. Set `HF_HUB_DISABLE_XET=1` and run
-   `scripts/prefetch_models.py` to completion before the demo. If it will not cache,
-   set `WHISPER_MODEL_SIZE=small` and accept the quality drop rather than risk it live.
+2. **Model weights must be cached before the demo.** `scripts/prefetch_models.py` now
+   sets `HF_HUB_DISABLE_XET=1` itself — the Xet backend failed mid-download here and
+   left a partial cache. `asr_engine` also degrades through `small → base → tiny`
+   rather than hard-failing, so a bad download costs quality, not the whole demo.
 3. **Edge-TTS throttling** — bounded now, but a triple timeout still costs ~36s. The
    committed fallback audio is the answer.
+
+
+---
+
+## 9. Model swap: measured, and rejected
+
+`large-v3-turbo` was the intended upgrade. It is worse on this hardware.
+
+| Model | Load | Raw WER | After `normalize()` | Per clip | RTF |
+|---|---|---|---|---|---|
+| `small` | 2.5s | 0.699 | **0.139** | **3.58s** | 1.09x |
+| `large-v3-turbo` | 5.1s | **0.593** | 0.376 | 14.88s | 4.52x |
+
+Six demo clips, identical prompt and decode settings, CPU int8.
+
+Turbo genuinely transcribes better raw — 0.593 vs 0.699 — and still loses end-to-end:
+
+1. **It is 4.2x slower.** RTF 4.52 means it cannot keep up with real time. The
+   glass-to-glass budget was already blown at 1.09.
+2. **`ASR_CORRECTION_RULES` are coupled to `small`.** They were hand-written against
+   the errors *that model* makes (`viatum piya`, `hiwe ken`, `pahalike`, `ikondio`).
+   Turbo makes different mistakes, the rules do not fire, and it never receives the
+   ~5x normalizer improvement that carries `small` from 0.699 to 0.139.
+
+**The coupling is the finding worth keeping.** The correction layer is tuned to one
+model's failure modes, so `WHISPER_MODEL_SIZE` cannot be changed in isolation. On a
+GPU — where turbo's latency disadvantage disappears — its better raw WER would likely
+win, but the rules must be re-derived against its error patterns first, and
+`scripts/ab_prompt_bias.py` re-run.
+
+The ~1.6GB turbo weights are now cached on this machine, so the swap can be re-tested
+cheaply if a GPU becomes available.

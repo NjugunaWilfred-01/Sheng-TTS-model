@@ -23,12 +23,28 @@ AUDIO_TEMP_DIR = BASE_DIR / "temp_audio"
 AUDIO_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 
 # ASR Settings
-# large-v3-turbo: pruned 4-layer decoder, ~8x faster than large-v3 at near-identical
-# accuracy, and far stronger than "small" on code-switched Sheng. This is the best
-# accuracy-per-millisecond option for CPU-only inference. The ~1.6GB weights are
-# downloaded and cached on first use -- run scripts/prefetch_models.py BEFORE the
-# demo so this never happens on stage.
-WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "large-v3-turbo")
+#
+# "small" is the measured default for CPU. large-v3-turbo was tried and is NOT
+# better here; on the six demo clips (same prompt, same decode settings):
+#
+#                   load    raw WER   after normalize()   per clip   RTF
+#   small           2.5s      0.699         0.139           3.58s   1.09x
+#   large-v3-turbo  5.1s      0.593         0.376          14.88s   4.52x
+#
+# Turbo wins on RAW transcription and still loses end-to-end, for two reasons:
+#
+#  1. It is 4.2x slower on CPU. At RTF 4.52 it cannot keep up with real time, and
+#     the glass-to-glass budget is already blown.
+#  2. ASR_CORRECTION_RULES were hand-written against the errors "small" makes
+#     ("viatum piya", "hiwe ken", "pahalike", "ikondio"). Turbo makes DIFFERENT
+#     mistakes, so the rules do not fire and it never gets the ~5x normalizer
+#     improvement that carries "small" to 0.139.
+#
+# That coupling is the thing to remember: the correction rules are tuned to a
+# specific model, so changing this value invalidates them. If you move to a larger
+# model (worth it on a GPU, where turbo's better raw WER would win), re-derive the
+# rules against that model's error patterns and re-run scripts/ab_prompt_bias.py.
+WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")
 ASR_LANGUAGE = "sw"  # Swahili language code for Whisper
 ASR_DEVICE = "cuda" if os.getenv("USE_CUDA", "false").lower() == "true" else "cpu"
 ASR_COMPUTE_TYPE = "float16" if ASR_DEVICE == "cuda" else "int8"
