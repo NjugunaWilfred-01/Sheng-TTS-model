@@ -228,3 +228,52 @@ win, but the rules must be re-derived against its error patterns first, and
 
 The ~1.6GB turbo weights are now cached on this machine, so the swap can be re-tested
 cheaply if a GPU becomes available.
+
+
+---
+
+## 10. The 1.5B LoRA retrain: done, and honestly assessed
+
+Trained on `zerolabs1` (RTX 5060 Ti) on 2026-09-17. `vllm-gemma4.service` was stopped
+to free VRAM and restored immediately afterwards; the box was left exactly as found
+(13538 MiB used / 2313 free, disk 5.3G, all five services active, working dir deleted).
+
+```
+base            Qwen/Qwen2.5-1.5B-Instruct   (was: Qwen2.5-0.5B-Instruct)
+data            2,500 turns                  (was: 150)
+train loss      0.152
+eval loss       0.194 -> 0.170 -> 0.163      (still improving at epoch 3)
+adapter         llm_sheng_lora_output_1_5B/final_adapter  (74MB)
+```
+
+The loss curve is healthy and eval tracks train closely, so it is **not** memorising
+the way the 0.5B did. On 8 test prompts it produced 8 unique replies using 10 distinct
+Sheng tokens, all fluent.
+
+### It is still a template matcher, and the demo prompts hide that
+
+On the six rehearsed scenarios it answers four well. On the other two it returns the
+*same* drip/luku template for two different questions. Held-out prompts expose it
+properly:
+
+| Prompt | Reply | |
+|---|---|---|
+| "Nimepoteza simu yangu kwa mathree, nifanye nini?" (*I lost my phone in a matatu, what do I do?*) | "Kibanda ya mama tao iko open, nyama choma iko tayari." (*The food stall is open, the roast meat is ready.*) | wrong |
+| "Mbona hukunipigia jana usiku?" (*Why didn't you call me last night?*) | "Toka mapema bazenga, gari ya mtepe ile thao zinajaa haraka." (*Leave early, those matatus fill up fast.*) | wrong |
+
+It matched `mathree` to a transport/food template and ignored the actual question.
+
+**Why:** the slot generator produces 2,500 records from only ~320 skeleton pairings.
+The diversity is *surface-level* — slot swaps within a fixed set of intents. The model
+learned roughly 40 patterns fluently instead of memorising 25 answers verbatim. That is
+a real improvement in variety, and the same class of failure.
+
+### Practical conclusion
+
+Use it over the 0.5B — it is strictly better. Do **not** use it over the API backend.
+`LLM_BACKEND=openai` remains the recommendation for anything but an offline demo.
+
+Making the local model genuinely conversational needs training data with real intent
+diversity, not more slot permutations of the same forty. That means either scraping
+real Sheng dialogue or generating it with a large model prompted for topical breadth —
+neither of which is a one-evening job.

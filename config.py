@@ -73,6 +73,14 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 # which matters when the whole glass-to-glass budget is 3 seconds.
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.groq.com/openai/v1")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "llama-3.3-70b-versatile")
+# LoRA adapters, newest first. The engine takes the first that exists on disk.
+# 1.5B trained 2026-09-17 on 2,500 slot-composed turns (train 0.152 / eval 0.163);
+# the 0.5B was trained on 150 and memorised them. See AUDIT_RESULTS.md section 10
+# for why neither is the recommended backend.
+LORA_ADAPTER_CANDIDATES = [
+    "llm_sheng_lora_output_1_5B/final_adapter",
+    "llm_sheng_lora_output/final_adapter",
+]
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")

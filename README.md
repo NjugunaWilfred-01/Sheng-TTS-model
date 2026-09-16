@@ -190,8 +190,14 @@ open-ended conversational Sheng.
 
 - **Latency.** CPU-only inference runs well over the 3s glass-to-glass target; the
   baseline averaged 6.8s/clip on `small`. A GPU, or shorter utterances, is the fix.
-- **The local LoRA is weak.** `llm_sheng_lora_output/` is Qwen2.5-**0.5B** trained on
-  150 samples. It memorises rather than generalises. Prefer the API backend.
+- **The local LoRA is a template matcher.** `llm_sheng_lora_output_1_5B/` is
+  Qwen2.5-1.5B trained on 2,500 turns (train 0.152 / eval 0.163) — strictly better than
+  the old 0.5B-on-150, which memorised verbatim. It produces fluent, varied Sheng and
+  answers the rehearsed demo prompts well. But ask it something off-script and it maps
+  to the nearest template: *"Nimepoteza simu yangu kwa mathree, nifanye nini?"* gets
+  *"Kibanda ya mama tao iko open, nyama choma iko tayari."* The 2,500 records come from
+  only ~320 skeleton pairings, so the diversity is surface-level. **Prefer the API
+  backend** for anything but an offline demo. See `AUDIT_RESULTS.md` §10.
 - **`dataset/*.jsonl` carries absolute Linux paths** (`/home/ray/...`). Use the
   `relative_path` field, which resolves correctly on any machine.
 - **Sheng is generational and neighbourhood-specific.** The lexicon reflects one

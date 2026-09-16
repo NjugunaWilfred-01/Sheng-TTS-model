@@ -161,9 +161,16 @@ class ShengLLMEngine:
         import torch
         from peft import PeftModel, PeftConfig
         from transformers import AutoModelForCausalLM, AutoTokenizer
-        from config import BASE_DIR
+        from config import BASE_DIR, LORA_ADAPTER_CANDIDATES
 
-        adapter_path = str(BASE_DIR / "llm_sheng_lora_output" / "final_adapter")
+        adapter_path = next(
+            (str(BASE_DIR / c) for c in LORA_ADAPTER_CANDIDATES if (BASE_DIR / c).exists()),
+            None,
+        )
+        if adapter_path is None:
+            raise FileNotFoundError(
+                f"No LoRA adapter found. Looked for: {LORA_ADAPTER_CANDIDATES}"
+            )
         if not hasattr(self, "_lora_model") or self._lora_model is None:
             logger.info(f"Lazy loading fine-tuned Sheng LoRA model from {adapter_path}...")
             peft_config = PeftConfig.from_pretrained(adapter_path)
