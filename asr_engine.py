@@ -34,6 +34,29 @@ class ShengASREngine:
     # Sheng accuracy, but a degraded transcriber beats a dead pipeline on stage.
     FALLBACK_SIZES = ("small", "base", "tiny")
 
+    def _device_works(self) -> bool:
+        """
+        Prove the device can actually run inference, not merely load weights.
+
+        CUDA failures here surface at ENCODE time, not load time. On a box with a
+        driver/library mismatch or missing CUDA runtime libs, ctranslate2 reports
+        "Loaded in 0.9s" and then dies on the first real audio with
+        "Library libcublas.so.12 is not found or cannot be loaded". A load-time
+        try/except never sees it, so the pipeline looks healthy until someone speaks.
+
+        Pushing 0.3s of silence through the full path catches it during startup.
+        """
+        try:
+            import numpy as np
+            segments, _ = self.model.transcribe(
+                np.zeros(4800, dtype=np.float32), language=ASR_LANGUAGE, beam_size=1
+            )
+            list(segments)  # generator: nothing executes until it is consumed
+            return True
+        except Exception as e:
+            logger.error(f"Device '{self.device}' loaded but cannot run inference: {e}")
+            return False
+
     def _load_model(self):
         """
         Load the Faster-Whisper model, degrading to a smaller one if necessary.
@@ -47,26 +70,47 @@ class ShengASREngine:
         """
         from faster_whisper import WhisperModel
 
-        candidates = [self.model_size] + [
-            s for s in self.FALLBACK_SIZES if s != self.model_size
-        ]
-        for size in candidates:
-            try:
-                logger.info(f"Loading Whisper '{size}' on {self.device} ({self.compute_type})...")
-                self.model = WhisperModel(size, device=self.device, compute_type=self.compute_type)
-                if size != self.model_size:
-                    logger.warning(
-                        f"Could not load '{self.model_size}'; running on '{size}' instead. "
-                        f"Transcription quality will be lower. Run "
-                        f"scripts/prefetch_models.py to cache the intended model."
-                    )
-                self.model_size = size
-                logger.info(f"Whisper model '{size}' loaded successfully.")
-                return
-            except Exception as e:
-                logger.error(f"Failed to load Whisper '{size}': {e}")
+        sizes = [self.model_size] + [s for s in self.FALLBACK_SIZES if s != self.model_size]
+        # Device fallback comes FIRST: a broken GPU is far more common than a broken
+        # model, and CPU int8 always works. Trying cuda/small then cpu/small beats
+        # trying cuda/small, cuda/base, cuda/tiny and failing identically each time.
+        devices = [(self.device, self.compute_type)]
+        if self.device != "cpu":
+            devices.append(("cpu", "int8"))
 
-        logger.error("No Whisper model could be loaded. ASR is unavailable.")
+        for device, compute in devices:
+            for size in sizes:
+                try:
+                    logger.info(f"Loading Whisper '{size}' on {device} ({compute})...")
+                    self.model = WhisperModel(size, device=device, compute_type=compute)
+                    if not self._device_works():
+                        self.model = None
+                        break  # device is broken; no smaller model will help
+                    if device != self.device:
+                        logger.warning(
+                            f"GPU unusable - falling back to {device}/{compute}. "
+                            f"This is slower but correct. Fix the GPU with: "
+                            f"nvidia-smi (check for driver/library mismatch -> reboot), "
+                            f"and pip install nvidia-cublas-cu12 nvidia-cudnn-cu12"
+                        )
+                    if size != self.model_size:
+                        logger.warning(
+                            f"Could not load '{self.model_size}'; running '{size}' instead. "
+                            f"Run scripts/prefetch_models.py to cache the intended model."
+                        )
+                    self.device, self.compute_type, self.model_size = device, compute, size
+                    logger.info(f"Whisper '{size}' ready on {device}.")
+                    return
+                except Exception as e:
+                    logger.error(f"Failed to load Whisper '{size}' on {device}: {e}")
+                    # A CUDA/driver error is a property of the DEVICE, not the model,
+                    # so retrying smaller sizes on it just burns startup time failing
+                    # three identical ways. Move to the next device immediately.
+                    if any(k in str(e).lower() for k in
+                           ("cuda", "cublas", "cudnn", "driver", "nvml", "gpu")):
+                        break
+
+        logger.error("No Whisper model could be loaded on any device. ASR is unavailable.")
         self.model = None
 
     def _strip_prompt_echo(self, text: str) -> str:

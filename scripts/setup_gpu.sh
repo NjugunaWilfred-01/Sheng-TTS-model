@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 #
-# setup_gpu.sh - Get the Sheng S2S pipeline running on a GPU box from scratch.
+# setup_gpu.sh - Get the Sheng S2S pipeline running, on GPU or CPU, from scratch.
 #
 #   bash scripts/setup_gpu.sh
 #
-# Idempotent: safe to re-run. Every step reports PASS/FAIL and the script stops at
-# the first thing that actually blocks the demo, so you get one clear error rather
+# Idempotent: safe to re-run. Every step reports PASS/WARN/FAIL and the script stops
+# at the first thing that actually blocks the demo, so you get one clear error rather
 # than a wall of output.
 #
+# A broken GPU is a WARN, not a FAIL: the pipeline runs correctly on CPU, just slower,
+# and asr_engine falls back automatically. Only genuine blockers stop the script.
+#
 # Env you can override:
+#   USE_CUDA=true        use the GPU (verified end-to-end before it is trusted)
 #   WHISPER_MODEL_SIZE   default small   (see the note under step 6)
 #   OPENAI_API_KEY       enables the good LLM backend; without it you get heuristic
 #   PORT                 default 7860
@@ -21,8 +25,7 @@ die(){  echo "${RED}  FAIL${RST}  $*"; echo; echo "${RED}Stopped.${RST} Fix the 
 step(){ echo; echo "${DIM}--- $* ---${RST}"; }
 
 cd "$(dirname "$0")/.." || die "cannot find repo root"
-REPO=$(pwd)
-echo "Repo: $REPO"
+echo "Repo: $(pwd)"
 
 # ---------------------------------------------------------------- 1. the code
 step "1. Code version"
@@ -41,13 +44,34 @@ step "2. System dependencies"
 command -v ffmpeg >/dev/null && ok "ffmpeg $(ffmpeg -version 2>/dev/null | head -1 | cut -d' ' -f3)" \
   || die "ffmpeg missing. Run: sudo apt install -y ffmpeg"
 
+# nvidia-smi exits non-zero on a driver/library mismatch but still prints to stdout.
+# Check the exit status and the text: an earlier version of this script printed the
+# error string as a PASS and then crashed comparing it as an integer.
+GPU_OK=0
 if command -v nvidia-smi >/dev/null; then
-  GPU=$(nvidia-smi --query-gpu=name,memory.free --format=csv,noheader | head -1)
-  ok "GPU: $GPU"
-  FREE=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
-  [ "$FREE" -lt 3000 ] && warn "only ${FREE}MiB free — something else is using the GPU"
+  GPU=$(nvidia-smi --query-gpu=name,memory.free --format=csv,noheader 2>&1 | head -1)
+  if [ $? -eq 0 ] && [ -n "$GPU" ] && ! echo "$GPU" | grep -qiE "failed|error|mismatch"; then
+    ok "GPU: $GPU"
+    GPU_OK=1
+    FREE=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1)
+    case "${FREE:-x}" in
+      ''|*[!0-9]*) : ;;
+      *) [ "$FREE" -lt 3000 ] && warn "only ${FREE}MiB free — something else is on the GPU" ;;
+    esac
+  else
+    warn "GPU present but UNUSABLE: $GPU"
+    if echo "$GPU" | grep -qi mismatch; then
+      echo "        Driver/library version mismatch: the loaded kernel module and the"
+      echo "        userspace libraries are different versions — usually a driver update"
+      echo "        without a reboot."
+      echo "          sudo reboot"
+      echo "        or, if nothing else is using the GPU:"
+      echo "          sudo rmmod nvidia_uvm nvidia_drm nvidia_modeset nvidia && sudo modprobe nvidia"
+    fi
+    echo "        ${DIM}Not a blocker — the pipeline runs correctly on CPU.${RST}"
+  fi
 else
-  warn "no nvidia-smi — will run on CPU (works, just slower)"
+  warn "no nvidia-smi — running on CPU (works, just slower)"
 fi
 
 # ---------------------------------------------------------------- 3. python
@@ -55,7 +79,7 @@ step "3. Python environment"
 PY=""
 for c in python3.12 python3.11 python3; do
   if command -v $c >/dev/null; then
-    V=$($c -c 'import sys;print("%d.%d"%sys.version_info[:2])')
+    V=$($c -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null)
     case "$V" in 3.9|3.10|3.11|3.12|3.13) PY=$c; break;; esac
   fi
 done
@@ -63,16 +87,16 @@ done
 ok "interpreter: $PY ($($PY -c 'import sys;print("%d.%d"%sys.version_info[:2])'))"
 
 [ -d .venv ] || { $PY -m venv .venv || die "venv creation failed"; ok "created .venv"; }
-VPY=.venv/bin/python
+VPY="$(pwd)/.venv/bin/python"
 $VPY -m pip install -q --upgrade pip >/dev/null 2>&1
 
 # ---------------------------------------------------------------- 4. packages
 step "4. Python packages"
-if ! $VPY -c "import faster_whisper, edge_tts, gradio, pydub, soundfile, pedalboard" 2>/dev/null; then
+if ! $VPY -c "import faster_whisper, edge_tts, gradio, pydub, soundfile" 2>/dev/null; then
   echo "  installing (a few minutes)..."
   $VPY -m pip install -q -r requirements.txt || die "pip install failed"
 fi
-$VPY -c "import faster_whisper, edge_tts, gradio, pydub, soundfile, pedalboard" 2>/dev/null \
+$VPY -c "import faster_whisper, edge_tts, gradio, pydub, soundfile" 2>/dev/null \
   && ok "core packages present" || die "packages still missing after install"
 
 # pedalboard is the one that fails silently: _polish() catches ImportError and skips,
@@ -82,20 +106,40 @@ $VPY -c "import pedalboard" 2>/dev/null && ok "pedalboard (audio polish active)"
 
 # ---------------------------------------------------------------- 5. device
 step "5. Compute device"
+CUDA_CHECK='
+import sys, numpy as np
+from faster_whisper import WhisperModel
+m = WhisperModel("tiny", device="cuda", compute_type="float16")
+list(m.transcribe(np.zeros(4800, dtype=np.float32), language="sw", beam_size=1)[0])
+print("cuda-ok")
+'
 if [ "${USE_CUDA:-}" = "true" ]; then
-  ok "USE_CUDA=true -> config selects cuda/float16"
+  if [ "$GPU_OK" = "1" ]; then
+    # Loading succeeds even when CUDA is unusable — ctranslate2 only fails at ENCODE
+    # time with "Library libcublas.so.12 is not found". So run real inference.
+    if $VPY -c "$CUDA_CHECK" >/dev/null 2>&1; then
+      ok "CUDA verified end-to-end (load + inference)"
+    else
+      warn "CUDA loads but cannot run inference — almost always missing runtime libs."
+      echo "        Fix:  $VPY -m pip install nvidia-cublas-cu12 nvidia-cudnn-cu12"
+      echo "        Then re-run this script with USE_CUDA=true."
+      echo "        ${DIM}Using CPU meanwhile; asr_engine falls back automatically.${RST}"
+      export USE_CUDA=false
+    fi
+  else
+    warn "USE_CUDA=true but the GPU is unusable (see step 2). Using CPU."
+    export USE_CUDA=false
+  fi
 else
-  warn "USE_CUDA not set — config defaults to CPU. On this box you want:"
-  echo "        export USE_CUDA=true"
+  ok "running on CPU (set USE_CUDA=true once the GPU is healthy)"
 fi
 
 # ---------------------------------------------------------------- 6. models
 step "6. Model weights"
-# WHISPER_MODEL_SIZE defaults to small, which is deliberate: ASR_CORRECTION_RULES were
-# hand-derived against small's error patterns, and on the demo phrases small+rules
-# scored WER 0.139 vs large-v3-turbo's 0.376. Turbo has better RAW WER (0.593 vs 0.699)
-# so it likely wins on unseen speech -- but the rules must be re-derived first.
-# On GPU, small is also fast enough that turbo buys you nothing for the demo.
+# WHISPER_MODEL_SIZE defaults to small deliberately: ASR_CORRECTION_RULES were derived
+# against small's error patterns, and on the demo phrases small+rules scored WER 0.139
+# vs large-v3-turbo's 0.376. Turbo has better RAW WER (0.593 vs 0.699) so it likely
+# wins on unseen speech -- but the rules must be re-derived for it first.
 echo "  WHISPER_MODEL_SIZE=${WHISPER_MODEL_SIZE:-small}"
 $VPY scripts/prefetch_models.py || die "model prefetch failed (see error above)"
 ok "whisper weights cached"
@@ -128,7 +172,7 @@ $VPY test_pipeline.py >/tmp/sheng_test.log 2>&1 \
 echo
 echo "${GRN}Ready.${RST}  Start it with:"
 echo
-echo "    export USE_CUDA=true"
+[ "${USE_CUDA:-false}" = "true" ] && echo "    export USE_CUDA=true"
 echo "    export LLM_BACKEND=openai OPENAI_API_KEY=gsk_..."
 echo "    $VPY app.py"
 echo
