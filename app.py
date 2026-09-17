@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import gradio as gr
 from pipeline import SpeechToSpeechPipeline
-from config import VOICE_OPTIONS, DEFAULT_VOICE, GRADIO_SERVER_NAME, GRADIO_SERVER_PORT, BASE_DIR
+from config import VOICE_OPTIONS, DEFAULT_VOICE, GRADIO_SERVER_NAME, GRADIO_SERVER_PORT, GRADIO_SHARE, BASE_DIR
 from sheng_lexicon import SHENG_DICTIONARY
 
 # Initialize Pipeline
@@ -208,11 +208,13 @@ with gr.Blocks(title="Swahili & Sheng S2S Agent", **_BLOCKS_STYLE) as demo:
                 latency_display = gr.Markdown("⚡ **Latency:** *Subiri sauti...*", elem_classes=["metric-box"])
 
                 gr.Markdown("### 💬 Maongezi Yote (Multi-Turn Chat)")
-                # type="messages" is required, not optional: process_voice_turn
-                # appends {"role": ..., "content": ...} dicts, and the older "tuples"
-                # format (the default before Gradio 6) cannot render them.
+                # process_voice_turn appends {"role","content"} dicts. Gradio 5
+                # defaults to the old "tuples" format and needs type="messages" to
+                # render them; Gradio 6 dropped the argument entirely because
+                # messages is now the only format. Passing it there is a TypeError
+                # at import, so it is conditional like the theme/css above.
                 chatbot = gr.Chatbot(label="Conversation History", height=280,
-                                     type="messages")
+                                     **({} if _GRADIO_MAJOR >= 6 else {"type": "messages"}))
 
         with gr.Accordion("📝 Maelezo ya Ziada (Live Transcripts)", open=False):
             with gr.Row():
@@ -248,6 +250,6 @@ if __name__ == "__main__":
     demo.launch(
         server_name=GRADIO_SERVER_NAME,
         server_port=GRADIO_SERVER_PORT,
-        share=False,
+        share=GRADIO_SHARE,
         **_LAUNCH_STYLE
     )

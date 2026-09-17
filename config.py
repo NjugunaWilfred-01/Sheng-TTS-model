@@ -85,5 +85,9 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
 
 # Web Server Settings
+# GRADIO_SHARE=true publishes a public *.gradio.live tunnel so someone off this
+# network can open the app. The link is unguessable but genuinely public and lives
+# ~72h, so keep it off by default and only turn it on to hand the demo to someone.
+GRADIO_SHARE = os.getenv("GRADIO_SHARE", "false").lower() == "true"
 GRADIO_SERVER_PORT = int(os.getenv("PORT", "7860"))
 GRADIO_SERVER_NAME = os.getenv("HOST", "0.0.0.0")
