@@ -27,6 +27,7 @@ class SpeechToSpeechPipeline:
         self.asr = asr_engine or ShengASREngine()
         self.llm = llm_engine or ShengLLMEngine()
         self.tts = tts_engine or ShengTTSEngine()
+        self.tts.warmup()  # absorb Edge-TTS cold start now, not on the first utterance
         logger.info("S2S Pipeline successfully initialized.")
 
     def reset_conversation(self):
@@ -97,8 +98,18 @@ class SpeechToSpeechPipeline:
 
         total_latency_ms = round((time.time() - total_start) * 1000, 2)
 
+        # TTS can fail (Edge-TTS is a network service) while ASR and the LLM both
+        # succeeded. Reporting success=True with an empty output_audio_path made the
+        # UI show a reply and silently play nothing, which looks like a dead app on
+        # stage. Surface it: the text is still useful, the missing audio is not hidden.
+        audio_ok = bool(audio_output)
+        if not audio_ok:
+            logger.error(f"TTS produced no audio: {tts_meta.get('error', 'unknown')}")
+
         return {
             "success": True,
+            "audio_ok": audio_ok,
+            "tts_error": None if audio_ok else tts_meta.get("error") or "TTS produced no audio",
             "user_raw_transcription": raw_text,
             "user_normalized_sheng": normalized_text,
             "bot_response_text": bot_reply,

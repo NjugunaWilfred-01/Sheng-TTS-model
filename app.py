@@ -89,6 +89,10 @@ def process_voice_turn(audio_input, voice_choice, rate_pct, pitch_hz, backend_ch
     history.append({"role": "user", "content": user_sheng or user_raw})
     history.append({"role": "assistant", "content": bot_reply})
 
+    # A reply with no audio used to render as a silent, dead player. Say so instead.
+    if not result.get("audio_ok", True):
+        bot_reply = f"⚠️ Sauti haikutoka (no audio: {result.get('tts_error')})\n\n{bot_reply}"
+
     latency_str = (
         f"⚡ **Glass-to-Glass:** `{latencies['total_glass_to_glass_ms']} ms` | "
         f"🎙️ **ASR:** `{latencies['asr_ms']} ms` | "

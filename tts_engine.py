@@ -20,16 +20,26 @@ class ShengTTSEngine:
         default_voice: str = DEFAULT_VOICE,
         default_rate: str = DEFAULT_RATE,
         default_pitch: str = DEFAULT_PITCH,
-        request_timeout_sec: float = 12.0,
-        max_attempts: int = 3,
+        request_timeout_sec: float = 20.0,
+        max_attempts: int = 2,
+        cold_start_timeout_sec: float = 35.0,
     ):
         self.default_voice = default_voice
         self.default_rate = default_rate
         self.default_pitch = default_pitch
-        # 12s: comfortably above a healthy synthesis (~1.5-2.5s) and well under the
-        # point where an audience notices the pipeline has died.
+        # 20s with 2 attempts. Edge-TTS is a network service and its latency is a
+        # property of YOUR link, not of this code: the same six clips measured
+        # 1.3-3s on a good connection and 15-27s on a degraded one. An aggressive
+        # 12s cap was worse than useless -- it killed slow-but-working requests and
+        # retried, turning a ~14s call into 26.8s. Tune this on the machine that will
+        # actually run the demo, not on a laptop; scripts/bench_tts.py measures it.
         self.request_timeout_sec = request_timeout_sec
+        # The FIRST call is different: TLS handshake and service wake-up measured 19.1s
+        # here, against 1.4s and 1.3s for the two calls after it. A flat 12s timeout
+        # killed the cold call and then both retries -- 36s spent to produce no audio.
+        self.cold_start_timeout_sec = cold_start_timeout_sec
         self.max_attempts = max_attempts
+        self._warm = False
 
     async def synthesize_async(
         self,
@@ -69,11 +79,10 @@ class ShengTTSEngine:
                     rate=selected_rate,
                     pitch=selected_pitch
                 )
+                timeout = self.request_timeout_sec if self._warm else self.cold_start_timeout_sec
                 try:
-                    await asyncio.wait_for(
-                        communicate.save(str(output_path)),
-                        timeout=self.request_timeout_sec,
-                    )
+                    await asyncio.wait_for(communicate.save(str(output_path)), timeout=timeout)
+                    self._warm = True
                     break
                 except Exception as e:  # includes asyncio.TimeoutError
                     if attempt == self.max_attempts:
@@ -140,6 +149,25 @@ class ShengTTSEngine:
             return asyncio.run(
                 self.synthesize_async(text, output_path, voice, rate, pitch)
             )
+
+    def warmup(self) -> bool:
+        """
+        Pay the cold-start cost at startup instead of on the first thing anyone says.
+
+        Edge-TTS is a network service; the first request here took 19.1s while the
+        next two took 1.4s and 1.3s. Called from the pipeline constructor so the
+        audience never waits for it.
+        """
+        try:
+            path, meta = self.synthesize("Niaje", output_path=str(AUDIO_TEMP_DIR / "_warmup.mp3"))
+            if path:
+                logger.info(f"TTS warmed up in {meta.get('tts_time_ms', 0):.0f}ms")
+                Path(path).unlink(missing_ok=True)
+                return True
+            logger.warning(f"TTS warmup failed: {meta.get('error')}. Live synthesis may be slow.")
+        except Exception as e:
+            logger.warning(f"TTS warmup failed: {e}. Live synthesis may be slow.")
+        return False
 
     def _polish(self, path: str):
         """Compress + tiny reverb so the voice doesn't sound like a vacuum recording."""
