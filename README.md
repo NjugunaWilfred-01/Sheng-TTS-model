@@ -153,6 +153,15 @@ pseudo-labels teaches the model to reproduce its own errors.
 Two decoder-level bugs contributing to the above have been fixed (see below), but they
 are not the whole gap. Closing it requires hand-verified transcripts.
 
+**The normalizer does not help real speech.** On those same 100 human-referenced clips,
+*zero of the 61 correction rules fire* — mean WER is 1.992 both with and without it.
+The rules were written from the six TTS demo phrases and match only those. Mining the
+real data for better rules (`scripts/derive_correction_rules.py`) finds **0 recurring
+substitutions out of 30**: Whisper's failures here are whole-utterance, not
+token-level, so no regex layer can repair them. `normalize()` is worth keeping — it is
+lossless and does help the rehearsed demo phrases — but it is not an accuracy feature,
+and any "5x improvement" figure measured on the demo set should not be quoted.
+
 ### The evaluation set is not in the repo
 
 `eval_asr.py` reads `zoza_transcripts/mapped_data`, which was never committed. It is the

@@ -97,10 +97,11 @@ Three conclusions, and the second one reversed a change made during this audit:
    on its own — the `disjoint` condition (same style, no shared phrasing) scored 0.891,
    essentially tying "no prompt".
 
-3. **`normalize()` is doing the real work** — a ~5× WER reduction (0.699 → 0.139).
-   *Heavily caveated:* those rules were hand-written against these exact demo phrases
-   (`viatum piya`, `hiwe ken`, `pahalike`, `ikondio`), so this is overfit to the demo
-   set and will not generalise at this magnitude to unseen speech.
+3. **`normalize()` appears to do the real work — but only on the demo clips.**
+   It shows a ~5x WER reduction here (0.699 → 0.139). **That number is an artifact.**
+   See §11: on the 100 clips with genuine human references, *zero of the 61 rules
+   fire at all*. The normalizer is a no-op on real conversational Sheng. Do not quote
+   0.139 as an accuracy figure.
 
 ---
 
@@ -277,3 +278,49 @@ Making the local model genuinely conversational needs training data with real in
 diversity, not more slot permutations of the same forty. That means either scraping
 real Sheng dialogue or generating it with a large model prompted for topical breadth —
 neither of which is a one-evening job.
+
+
+---
+
+## 11. Correction: the normalizer does nothing on real speech
+
+Section 4 called the rules "overfit to the demo set". Measured properly against
+`results_baseline.csv` — the only 100 clips with genuine human transcripts — that
+understated it:
+
+```
+rules that fire on 100 real clips ...... 0 of 61
+clips where normalize() changed WER .... 0   (0 helped, 0 hurt, 100 unchanged)
+mean WER raw vs normalized ............. 1.992 vs 1.992
+```
+
+The correction rules were written by reading the six TTS-generated demo phrases, and
+they match **only** those phrases. On real conversational Sheng the normalizer is a
+no-op. The "~5x improvement" is entirely an artifact of measuring on the same six
+clips the rules were derived from.
+
+### And there are no better rules to write
+
+`scripts/derive_correction_rules.py` mines the substitutions Whisper actually makes,
+aligning each hypothesis against its human reference on a 70/30 split:
+
+```
+distinct substitutions found ........... 30
+substitutions recurring >= 2 times ..... 0
+```
+
+Nothing recurs. Whisper's failures on this audio are **whole-utterance**, not
+token-level — it mishears the entire clip rather than consistently mangling
+particular words. No regex layer can repair that.
+
+### What this changes
+
+- **`normalize()` is still correct to keep.** It is lossless, costs nothing, and does
+  help the rehearsed demo phrases. It is just not an accuracy feature.
+- **The two-stage `normalize()`/`slangify()` split still matters** — for the reason in
+  §6 (keeping meaning-changing rewrites out of display, scoring, and training labels),
+  not for WER.
+- **Nothing shortcuts the data problem.** Verified transcripts and a fine-tune are the
+  only paths to better ASR. Use `scripts/review_transcripts.py`.
+- **Machine-portability is moot.** §12 was going to be about rules not transferring
+  between machines; that only matters for rules that fire, and on real speech none do.

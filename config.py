@@ -35,15 +35,14 @@ AUDIO_TEMP_DIR.mkdir(parents=True, exist_ok=True)
 #
 #  1. It is 4.2x slower on CPU. At RTF 4.52 it cannot keep up with real time, and
 #     the glass-to-glass budget is already blown.
-#  2. ASR_CORRECTION_RULES were hand-written against the errors "small" makes
-#     ("viatum piya", "hiwe ken", "pahalike", "ikondio"). Turbo makes DIFFERENT
-#     mistakes, so the rules do not fire and it never gets the ~5x normalizer
-#     improvement that carries "small" to 0.139.
+#  2. ASR_CORRECTION_RULES were hand-written against the errors "small" makes on the
+#     six demo clips, so turbo's different mistakes do not match them and it misses
+#     the 0.139 figure. NOTE: that normalizer gain is itself demo-only -- on real
+#     human-referenced audio zero rules fire for either model (AUDIT_RESULTS.md §11).
+#     So reason 1, the 4.2x latency cost, is the one that actually decides this.
 #
-# That coupling is the thing to remember: the correction rules are tuned to a
-# specific model, so changing this value invalidates them. If you move to a larger
-# model (worth it on a GPU, where turbo's better raw WER would win), re-derive the
-# rules against that model's error patterns and re-run scripts/ab_prompt_bias.py.
+# On a GPU the latency argument disappears and turbo's better RAW WER (0.593 vs
+# 0.699) should win. Re-run scripts/ab_prompt_bias.py there before switching.
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")
 ASR_LANGUAGE = "sw"  # Swahili language code for Whisper
 ASR_DEVICE = "cuda" if os.getenv("USE_CUDA", "false").lower() == "true" else "cpu"
