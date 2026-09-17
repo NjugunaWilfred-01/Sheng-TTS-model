@@ -1,7 +1,9 @@
 # --- Core runtime (needed to run app.py / cli.py / pipeline.py) ---
 faster-whisper>=1.0.0
 edge-tts>=6.1.10
-gradio>=4.0.0
+# >=5.0, not >=4: app.py hands the Chatbot {"role","content"} message dicts, which
+# Gradio 4's default "tuples" format cannot render.
+gradio>=5.0.0
 soundfile>=0.12.1
 pydub>=0.25.1
 numpy>=1.24.0

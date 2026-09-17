@@ -125,10 +125,16 @@ custom_css = """
 .demo-btn { margin-bottom: 5px; }
 """
 
-# theme/css belong on launch() from Gradio 6.0 on. They still work on Blocks, but
-# passing them there prints a deprecation warning at startup -- not what you want
-# scrolling past while an audience watches the app boot.
-with gr.Blocks(title="Swahili & Sheng S2S Agent") as demo:
+# Gradio moved theme/css from Blocks() to launch() in 6.0. Passing them to the wrong
+# one is not cosmetic: on Gradio 5 and earlier, launch(theme=...) raises
+# "TypeError: unexpected keyword argument" and the app does not start at all.
+# requirements.txt allows >=5.0, so decide at runtime rather than assuming.
+_GRADIO_MAJOR = int(gr.__version__.split(".")[0])
+_STYLE = {"theme": gr.themes.Soft(), "css": custom_css}
+_BLOCKS_STYLE = {} if _GRADIO_MAJOR >= 6 else _STYLE
+_LAUNCH_STYLE = _STYLE if _GRADIO_MAJOR >= 6 else {}
+
+with gr.Blocks(title="Swahili & Sheng S2S Agent", **_BLOCKS_STYLE) as demo:
     with gr.Column(elem_classes=["container"]):
         gr.Markdown(
             """
@@ -198,7 +204,11 @@ with gr.Blocks(title="Swahili & Sheng S2S Agent") as demo:
                 latency_display = gr.Markdown("⚡ **Latency:** *Subiri sauti...*", elem_classes=["metric-box"])
 
                 gr.Markdown("### 💬 Maongezi Yote (Multi-Turn Chat)")
-                chatbot = gr.Chatbot(label="Conversation History", height=280)
+                # type="messages" is required, not optional: process_voice_turn
+                # appends {"role": ..., "content": ...} dicts, and the older "tuples"
+                # format (the default before Gradio 6) cannot render them.
+                chatbot = gr.Chatbot(label="Conversation History", height=280,
+                                     type="messages")
 
         with gr.Accordion("📝 Maelezo ya Ziada (Live Transcripts)", open=False):
             with gr.Row():
@@ -235,6 +245,5 @@ if __name__ == "__main__":
         server_name=GRADIO_SERVER_NAME,
         server_port=GRADIO_SERVER_PORT,
         share=False,
-        theme=gr.themes.Soft(),
-        css=custom_css
+        **_LAUNCH_STYLE
     )
