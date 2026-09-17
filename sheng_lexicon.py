@@ -205,6 +205,44 @@ SHENG_SLANG_RULES: List[Tuple[re.Pattern, str]] = [
 SHENG_NORMALIZATION_RULES = ASR_CORRECTION_RULES
 
 
+# Tokens Whisper reliably glues onto its neighbours. Used to split joined tokens
+# BEFORE the correction rules run, since those rules are all -anchored and a joined
+# token like "leochiefi" never matches chiefi.
+#
+# This exists because the correction rules turned out to be machine-specific: the same
+# clip, model and code produced "leo chiefi" on one box and "leochiefi" on another
+# (different ctranslate2 build / CPU kernels), and only the first was repaired.
+# Splitting first makes the rules fire on both.
+_SPLIT_VOCAB = {
+    "leo", "chief", "chiefi", "form", "fom", "ni", "gani", "na", "mtaani", "mtani",
+    "mbogi", "rada", "hustle", "usle", "keja", "luku", "tao", "nganya", "fiti", "poa",
+    "msee", "maze", "morio", "dooh", "ganji", "wapi", "aje", "yako", "iko", "wazi",
+    "nisho", "unisho", "alafu", "kwa", "ya", "wa", "za", "sana", "kabisa", "weekend",
+}
+_SPLIT_MIN = 3  # never split off a fragment shorter than this
+
+
+def _split_joined(text: str) -> str:
+    """Split a glued token into two known words, when exactly one split works."""
+    out = []
+    for tok in text.split():
+        core = tok.strip(".,!?;:")
+        suffix = tok[len(core):]
+        low = core.lower()
+        if low in _SPLIT_VOCAB or len(low) < _SPLIT_MIN * 2 or not low.isalpha():
+            out.append(tok)
+            continue
+        hits = [
+            (low[:i], low[i:])
+            for i in range(_SPLIT_MIN, len(low) - _SPLIT_MIN + 1)
+            if low[:i] in _SPLIT_VOCAB and low[i:] in _SPLIT_VOCAB
+        ]
+        # Exactly one way to split it means the split is unambiguous. Two or more
+        # means we are guessing, so leave the token alone.
+        out.append(f"{hits[0][0]} {hits[0][1]}{suffix}" if len(hits) == 1 else tok)
+    return " ".join(out)
+
+
 class ShengNormalizer:
     """
     Two-stage text cleanup for transcribed Sheng.
@@ -225,7 +263,7 @@ class ShengNormalizer:
         """Repair ASR errors only. Lossless - never changes which word was said."""
         if not text:
             return ""
-        return cls._apply(text, ASR_CORRECTION_RULES)
+        return cls._apply(_split_joined(text), ASR_CORRECTION_RULES)
 
     @classmethod
     def slangify(cls, text: str) -> str:
